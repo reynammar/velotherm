@@ -1,0 +1,33 @@
+@import "tailwindcss";
+@import "../src/styles/token.css";
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--color-brand-bg);
+  color: var(--color-brand-charcoal);
+  font-family: var(--font-inter), sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--color-brand-red);
+  color: var(--color-brand-surface);
+}

@@ -1,0 +1,108 @@
+:root {
+  /* =================================
+     BRAND COLORS
+  ================================= */
+
+  --color-brand-red: #dc2626;
+  --color-brand-crimson: #e11d48;
+  --color-brand-dark-red: #991b1b;
+
+  --color-brand-charcoal: #0f172a;
+  --color-brand-zinc-dark: #18181b;
+  --color-brand-card-dark: #1e293b;
+
+  --color-brand-bg: #f8fafc;
+  --color-brand-bg-muted: #f1f5f9;
+  --color-brand-surface: #ffffff;
+  --color-brand-muted: #64748b;
+
+  --color-brand-cyan: #0891b2;
+
+  /* =================================
+     SEMANTIC COLORS
+  ================================= */
+
+  --color-status-warning: #f59e0b;
+  --color-status-success: #10b981;
+  --color-status-error: #e11d48;
+  --color-status-info: #0ea5e9;
+
+  /* =================================
+     BORDERS
+  ================================= */
+
+  --border-width-default: 1px;
+  --border-width-strong: 2px;
+
+  --border-color-default: #e2e8f0;
+  --border-color-dark: #334155;
+  --border-color-active: var(--color-brand-red);
+
+  /* =================================
+     CHAMFER
+  ================================= */
+
+  --clip-chamfer-sm:
+    polygon(
+      6px 0,
+      100% 0,
+      100% calc(100% - 6px),
+      calc(100% - 6px) 100%,
+      0 100%,
+      0 6px
+    );
+
+  --clip-chamfer-md:
+    polygon(
+      10px 0,
+      100% 0,
+      100% calc(100% - 10px),
+      calc(100% - 10px) 100%,
+      0 100%,
+      0 10px
+    );
+
+  --clip-chamfer-lg:
+    polygon(
+      16px 0,
+      100% 0,
+      100% calc(100% - 16px),
+      calc(100% - 16px) 100%,
+      0 100%,
+      0 16px
+    );
+
+  /* =================================
+     SHADOWS
+  ================================= */
+
+  --shadow-card:
+    0 4px 14px rgba(15, 23, 42, 0.08);
+
+  --shadow-card-hover:
+    0 10px 24px rgba(15, 23, 42, 0.12);
+
+  --shadow-glow-red:
+    0 0 20px rgba(220, 38, 38, 0.25);
+
+  --shadow-glow-red-lg:
+    0 0 36px rgba(220, 38, 38, 0.35);
+
+  /* =================================
+     MOTION
+  ================================= */
+
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 650ms;
+
+  --ease-technical: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* =================================
+     SPACING
+  ================================= */
+
+  --space-section: 6rem;
+  --space-panel: 1.5rem;
+  --space-control: 1rem;
+}
