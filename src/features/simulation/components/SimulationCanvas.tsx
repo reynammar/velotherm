@@ -2,37 +2,72 @@
 
 import {
   useCallback,
+  useEffect,
   useRef,
   useState,
+  type ComponentRef,
   type ReactNode,
+  type RefObject,
 } from "react";
 
-import { OrbitControls } from "@react-three/drei";
+import {
+  OrbitControls,
+} from "@react-three/drei";
+
 import {
   Canvas,
   useFrame,
+  useThree,
 } from "@react-three/fiber";
 
 import {
+  Box3,
+  Quaternion,
+  Vector3,
   type GridHelper,
+  type Object3D,
 } from "three";
 
-import { CarModel } from "@/src/features/simulation/components/CarModel";
+import {
+  CarModel,
+} from "@/src/features/simulation/components/CarModel";
 
-import { WheelSystem } from "@/src/features/simulation/components/WheelSystem";
+import {
+  WheelSystem,
+} from "@/src/features/simulation/components/WheelSystem";
 
-import type { CarNodeRegistry } from "@/src/lib/three/nodeRegistry";
+import {
+  enginePlaybackRateToWheelAngularVelocity,
+} from "@/src/features/simulation/utils/engineWheelCoupling";
+
+import type {
+  CarNodeRegistry,
+} from "@/src/lib/three/nodeRegistry";
 
 const FLOOR_Y = 0;
 
-/**
- * Visual-only scaling factor.
- *
- * This does not change the physical velocity.
- * It only controls how fast the floor grid appears
- * to move during the educational simulation.
- */
 const VISUAL_TRAVEL_SCALE = 0.12;
+
+type CameraFocus =
+  | "engine"
+  | null;
+
+type ControlsRef = RefObject<
+  ComponentRef<
+    typeof OrbitControls
+  > | null
+>;
+
+type CameraFocusControllerProps = {
+  active: boolean;
+  focusObject?: Object3D;
+  controlsRef: ControlsRef;
+};
+
+type WorldAnchorProps = {
+  target: Object3D;
+  children: ReactNode;
+};
 
 type SimulationCanvasProps = {
   angularVelocity?: number;
@@ -69,6 +104,16 @@ type SimulationCanvasProps = {
 
   showFloor?: boolean;
 
+  cameraFocus?: CameraFocus;
+
+  fullScreen?: boolean;
+
+  engineOverlay?: ReactNode;
+
+  engineRunning?: boolean;
+
+  enginePlaybackRate?: number;
+
   children?: ReactNode;
 };
 
@@ -98,11 +143,6 @@ function SimulationFloor({
       gridRef.current.position.z -
       movement;
 
-    /**
-     * Wrap the grid every 1 world unit so
-     * the pattern can move continuously
-     * without leaving the scene.
-     */
     gridRef.current.position.z =
       ((nextPosition % 1) + 1) % 1;
   });
@@ -149,32 +189,338 @@ function SimulationFloor({
   );
 }
 
+function WorldAnchor({
+  target,
+  children,
+}: WorldAnchorProps) {
+  const groupRef =
+    useRef<Object3D | null>(
+      null,
+    );
+
+  const worldPositionRef =
+    useRef(new Vector3());
+
+  const worldQuaternionRef =
+    useRef(new Quaternion());
+
+  useFrame(() => {
+    const group =
+      groupRef.current;
+
+    if (!group) {
+      return;
+    }
+
+    target.getWorldPosition(
+      worldPositionRef.current,
+    );
+
+    target.getWorldQuaternion(
+      worldQuaternionRef.current,
+    );
+
+    group.position.copy(
+      worldPositionRef.current,
+    );
+    
+    group.quaternion.copy(
+      worldQuaternionRef.current,
+    );
+    
+  });
+
+  return (
+    <group ref={groupRef}>
+      {children}
+    </group>
+  );
+}
+
+function CameraFocusController({
+  active,
+  focusObject,
+  controlsRef,
+}: CameraFocusControllerProps) {
+  const { camera } =
+    useThree();
+
+  const previousActiveRef =
+    useRef(active);
+
+  const startCameraRef =
+    useRef(new Vector3());
+
+  const endCameraRef =
+    useRef(new Vector3());
+
+  const startTargetRef =
+    useRef(new Vector3());
+
+  const endTargetRef =
+    useRef(new Vector3());
+
+  const restoreCameraRef =
+    useRef(new Vector3());
+
+  const restoreTargetRef =
+    useRef(new Vector3());
+
+  const transitionStartRef =
+    useRef<number | null>(null);
+
+  const transitioningRef =
+    useRef(false);
+
+  useEffect(() => {
+    const controls =
+      controlsRef.current;
+
+    if (!controls) {
+      return;
+    }
+
+    if (
+      !previousActiveRef.current &&
+      !active
+    ) {
+      return;
+    }
+
+    if (
+      !previousActiveRef.current &&
+      active
+    ) {
+      if (!focusObject) {
+        return;
+      }
+
+      startCameraRef.current.copy(
+        camera.position,
+      );
+
+      startTargetRef.current.copy(
+        controls.target,
+      );
+
+      restoreCameraRef.current.copy(
+        camera.position,
+      );
+
+      restoreTargetRef.current.copy(
+        controls.target,
+      );
+
+      const bounds =
+        new Box3().setFromObject(
+          focusObject,
+        );
+
+      if (bounds.isEmpty()) {
+        return;
+      }
+
+      const center =
+        bounds.getCenter(
+          new Vector3(),
+        );
+
+      const size =
+        bounds.getSize(
+          new Vector3(),
+        );
+
+      const distance =
+        Math.max(
+          size.length() * 2.4,
+          3.2,
+        );
+
+      const direction =
+        camera.position
+          .clone()
+          .sub(center);
+
+      if (
+        direction.lengthSq() <
+        0.01
+      ) {
+        direction.set(
+          1,
+          0.35,
+          1,
+        );
+      }
+
+      direction.normalize();
+
+      endCameraRef.current
+        .copy(center)
+        .addScaledVector(
+          direction,
+          distance,
+        );
+
+      endCameraRef.current.y +=
+        Math.max(
+          size.y * 0.3,
+          0.5,
+        );
+
+      endTargetRef.current.copy(
+        center,
+      );
+
+      controls.enabled = false;
+
+      transitionStartRef.current =
+        performance.now();
+
+      transitioningRef.current =
+        true;
+    }
+
+    if (
+      previousActiveRef.current &&
+      !active
+    ) {
+      startCameraRef.current.copy(
+        camera.position,
+      );
+
+      startTargetRef.current.copy(
+        controls.target,
+      );
+
+      endCameraRef.current.copy(
+        restoreCameraRef.current,
+      );
+
+      endTargetRef.current.copy(
+        restoreTargetRef.current,
+      );
+
+      controls.enabled = false;
+
+      transitionStartRef.current =
+        performance.now();
+
+      transitioningRef.current =
+        true;
+    }
+
+    previousActiveRef.current =
+      active;
+  }, [
+    active,
+    camera,
+    controlsRef,
+    focusObject,
+  ]);
+
+  useFrame(() => {
+    const controls =
+      controlsRef.current;
+
+    const startTime =
+      transitionStartRef.current;
+
+    if (
+      !controls ||
+      !transitioningRef.current ||
+      startTime === null
+    ) {
+      return;
+    }
+
+    const elapsed =
+      performance.now() -
+      startTime;
+
+    const duration = 850;
+
+    const progress =
+      Math.min(
+        elapsed / duration,
+        1,
+      );
+
+    const smoothProgress =
+      1 -
+      (1 -
+        progress) ** 3;
+
+    camera.position.lerpVectors(
+      startCameraRef.current,
+      endCameraRef.current,
+      smoothProgress,
+    );
+
+    controls.target.lerpVectors(
+      startTargetRef.current,
+      endTargetRef.current,
+      smoothProgress,
+    );
+
+    controls.update();
+
+    if (progress >= 1) {
+      transitioningRef.current =
+        false;
+
+      transitionStartRef.current =
+        null;
+
+      controls.enabled = true;
+    }
+  });
+
+  return null;
+}
+
 export function SimulationCanvas({
   angularVelocity = 0,
   steeringAngle = 0,
   resetKey = 0,
+
   motionSpeedMs = 0,
+
   carPosition = [
     0,
     0,
     0,
   ],
+
   carRotation = [
     0,
     0,
     0,
   ],
+
   cameraPosition = [
     4.8,
     2.2,
     4.3,
   ],
+
   cameraTarget = [
     0,
     1.15,
     -2.13,
   ],
+
   showFloor = true,
+
+  cameraFocus = null,
+
+  fullScreen = false,
+
+  engineOverlay,
+
+  engineRunning = false,
+
+  enginePlaybackRate = 1,
+
   children,
 }: SimulationCanvasProps) {
   const [
@@ -184,6 +530,13 @@ export function SimulationCanvas({
     useState<CarNodeRegistry | null>(
       null,
     );
+
+  const controlsRef =
+    useRef<
+      ComponentRef<
+        typeof OrbitControls
+      > | null
+    >(null);
 
   const handleNodesReady =
     useCallback(
@@ -195,8 +548,43 @@ export function SimulationCanvas({
       [],
     );
 
+  const focusObject =
+    cameraFocus ===
+    "engine"
+      ? carNodes?.engine
+          .mechanism
+      : undefined;
+
+  const engineWheelVelocity =
+    engineRunning
+      ? enginePlaybackRateToWheelAngularVelocity(
+          enginePlaybackRate,
+        )
+      : 0;
+
+  /**
+   * Explicit angularVelocity
+   * takes priority.
+   *
+   * This keeps vehicle-specific
+   * scenes such as Kinetic Energy
+   * compatible with their existing
+   * wheel control.
+   */
+  const finalWheelAngularVelocity =
+    angularVelocity !== 0
+      ? angularVelocity
+      : engineWheelVelocity;
+
+  const viewportClass =
+    fullScreen
+      ? "h-full w-full"
+      : "h-[420px] w-full sm:h-[500px] lg:h-[560px]";
+
   return (
-    <div className="h-[420px] w-full bg-[var(--color-brand-charcoal)] sm:h-[500px] lg:h-[560px]">
+    <div
+      className={`${viewportClass} bg-[var(--color-brand-charcoal)]`}
+    >
       <Canvas
         camera={{
           position:
@@ -215,7 +603,11 @@ export function SimulationCanvas({
         />
 
         <directionalLight
-          position={[5, 8, 5]}
+          position={[
+            5,
+            8,
+            5,
+          ]}
           intensity={2}
         />
 
@@ -239,6 +631,10 @@ export function SimulationCanvas({
             onNodesReady={
               handleNodesReady
             }
+            engineFocus={
+              cameraFocus ===
+              "engine"
+            }
           />
 
           {carNodes && (
@@ -247,7 +643,7 @@ export function SimulationCanvas({
                 carNodes.wheels
               }
               angularVelocity={
-                angularVelocity
+                finalWheelAngularVelocity
               }
               steeringAngle={
                 steeringAngle
@@ -259,21 +655,48 @@ export function SimulationCanvas({
           )}
         </group>
 
+        {focusObject &&
+          cameraFocus ===
+            "engine" &&
+          engineOverlay && (
+            <WorldAnchor
+              target={
+                focusObject
+              }
+            >
+              {engineOverlay}
+            </WorldAnchor>
+          )}
+
         {children}
 
         <OrbitControls
+          ref={controlsRef}
           target={
             cameraTarget
           }
           enableDamping
           dampingFactor={0.08}
           minDistance={3.5}
-          maxDistance={12}
+          maxDistance={14}
           minPolarAngle={
             Math.PI * 0.35
           }
           maxPolarAngle={
             Math.PI * 0.6
+          }
+        />
+
+        <CameraFocusController
+          active={
+            cameraFocus ===
+            "engine"
+          }
+          focusObject={
+            focusObject
+          }
+          controlsRef={
+            controlsRef
           }
         />
       </Canvas>

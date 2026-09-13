@@ -3,9 +3,10 @@
 import { useState } from "react";
 
 import { Button } from "@/src/shared/components/Button";
-import { Metric } from "@/src/shared/components/Metric";
 import { Panel } from "@/src/shared/components/Panel";
 import { TechnicalLabel } from "@/src/shared/components/TechnicalLabel";
+
+import { SimulationShell } from "@/src/features/simulation/components/SimulationShell";
 
 import { SimulationCanvas } from "@/src/features/simulation/components/SimulationCanvas";
 
@@ -28,46 +29,46 @@ const DEFAULT_MASS = 1200;
 const DEFAULT_SPEED_MS = 20;
 
 export function Scene01KineticEnergy() {
-  const [massKg, setMassKg] =
-    useState(DEFAULT_MASS);
+  const [
+    massKg,
+    setMassKg,
+  ] = useState(DEFAULT_MASS);
 
-  const [speedMs, setSpeedMs] =
-    useState(DEFAULT_SPEED_MS);
+  const [
+    speedMs,
+    setSpeedMs,
+  ] = useState(
+    DEFAULT_SPEED_MS,
+  );
 
-  const [isPlaying, setIsPlaying] =
-    useState(false);
+  const [
+    isPlaying,
+    setIsPlaying,
+  ] = useState(false);
 
-  const [resetKey, setResetKey] =
-    useState(0);
+  const [
+    resetKey,
+    setResetKey,
+  ] = useState(0);
 
   const {
     currentSpeedMs,
     accelerationMs2,
     resetMotion,
-  } = useVehicleMotion({
-    targetSpeedMs: speedMs,
-    massKg,
-    isPlaying,
-  });
+  } =
+    useVehicleMotion({
+      targetSpeedMs:
+        speedMs,
+      massKg,
+      isPlaying,
+    });
 
-  /**
-   * Convert the current physical velocity
-   * to km/h for the vehicle speedometer.
-   */
   const currentSpeedKmh =
     currentSpeedMs * 3.6;
 
   const targetSpeedKmh =
     speedMs * 3.6;
 
-  /**
-   * Educational physics uses the user's
-   * target/input velocity.
-   *
-   * This keeps the formula deterministic
-   * while the current velocity controls
-   * visual motion.
-   */
   const kineticEnergyJ =
     calculateKineticEnergy(
       massKg,
@@ -79,10 +80,6 @@ export function Scene01KineticEnergy() {
       kineticEnergyJ,
     );
 
-  /**
-   * Current vehicle velocity drives
-   * wheel angular velocity.
-   */
   const wheelAngularVelocity =
     vehicleSpeedToWheelAngularVelocity(
       currentSpeedKmh,
@@ -90,7 +87,8 @@ export function Scene01KineticEnergy() {
 
   const handlePlayPause = () => {
     setIsPlaying(
-      (current) => !current,
+      (current) =>
+        !current,
     );
   };
 
@@ -112,343 +110,236 @@ export function Scene01KineticEnergy() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* =========================
-          SIMULATION
-      ========================= */}
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <Panel className="overflow-hidden p-0">
-          <SimulationCanvas
-            angularVelocity={
-              isPlaying
-                ? wheelAngularVelocity
-                : 0
-            }
-            motionSpeedMs={
-              isPlaying
-                ? currentSpeedMs
-                : 0
-            }
-            resetKey={
-              resetKey
-            }
+    <SimulationShell
+      moduleLabel="Module 01"
+      sceneNumber="01"
+      sceneLabel="Kinetic Energy"
+      topRight={
+        <Speedometer
+          speedKmh={
+            isPlaying
+              ? currentSpeedKmh
+              : 0
+          }
+          maxSpeedKmh={144}
+          compact
+        />
+      }
+      bottomContent={
+        <div className="grid gap-3 lg:grid-cols-[1.05fr_1.6fr_auto]">
+          <Panel
+            variant="dark"
+            className="border-slate-700/80 bg-slate-950/78 p-4 backdrop-blur-md sm:p-5"
           >
-            <DustEffect
-              speedKmh={
-                isPlaying
-                  ? currentSpeedKmh
-                  : 0
-              }
-            />
-          </SimulationCanvas>
-        </Panel>
+            <div className="flex items-start justify-between gap-4">
+              <TechnicalLabel accent="cyan">
+                Kinetic Energy
+              </TechnicalLabel>
 
-        <div className="space-y-6">
-          <Speedometer
-            speedKmh={
-              isPlaying
-                ? currentSpeedKmh
-                : 0
-            }
-            maxSpeedKmh={144}
-          />
-
-          <Panel variant="dark">
-            <TechnicalLabel accent="cyan">
-              Energy Result
-            </TechnicalLabel>
-
-            <div className="mt-6">
-              <Metric
-                value={kineticEnergyKJ.toFixed(
-                  2,
-                )}
-                unit="kJ"
-                label="Kinetic Energy"
-                variant="dark"
-              />
+              <span className="font-[var(--font-jetbrains-mono)] text-[9px] uppercase tracking-wide text-slate-500">
+                LIVE
+              </span>
             </div>
 
-            <div className="mt-6 space-y-5 border-t border-slate-700 pt-5">
-              <div>
-                <span className="block font-[var(--font-chakra-petch)] text-xs uppercase tracking-wide text-slate-400">
-                  Target Velocity
-                </span>
+            <div className="mt-3 flex items-end gap-2">
+              <span className="font-[var(--font-oswald)] text-4xl font-semibold leading-none text-white sm:text-5xl">
+                {kineticEnergyKJ.toFixed(
+                  2,
+                )}
+              </span>
 
-                <span className="mt-1 block font-[var(--font-jetbrains-mono)] text-sm text-white">
-                  {speedMs.toFixed(
-                    2,
-                  )}{" "}
-                  m/s
-                </span>
+              <span className="mb-1 font-[var(--font-jetbrains-mono)] text-xs text-slate-400">
+                kJ
+              </span>
+            </div>
+
+            <div className="mt-4 border-t border-slate-700 pt-3">
+              <span className="font-[var(--font-jetbrains-mono)] text-[10px] text-slate-300">
+                KE = ½mv²
+              </span>
+
+              <p className="mt-1 font-[var(--font-jetbrains-mono)] text-[9px] text-slate-500">
+                ½ × {massKg} ×{" "}
+                {speedMs.toFixed(
+                  2,
+                )}²
+              </p>
+            </div>
+          </Panel>
+
+          <Panel
+            variant="dark"
+            className="border-slate-700/80 bg-slate-950/78 p-4 backdrop-blur-md sm:p-5"
+          >
+            <TechnicalLabel>
+              Parameters
+            </TechnicalLabel>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-[var(--font-chakra-petch)] text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                    Mass
+                  </span>
+
+                  <span className="font-[var(--font-jetbrains-mono)] text-[10px] text-white">
+                    {massKg} kg
+                  </span>
+                </div>
+
+                <input
+                  id="kinetic-mass"
+                  type="range"
+                  min="600"
+                  max="1800"
+                  step="50"
+                  value={massKg}
+                  onChange={(
+                    event,
+                  ) =>
+                    setMassKg(
+                      Number(
+                        event
+                          .target
+                          .value,
+                      ),
+                    )
+                  }
+                  className="mt-3 w-full accent-[var(--color-brand-red)]"
+                />
               </div>
 
               <div>
-                <span className="block font-[var(--font-chakra-petch)] text-xs uppercase tracking-wide text-slate-400">
-                  Current Velocity
-                </span>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-[var(--font-chakra-petch)] text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                    Target Velocity
+                  </span>
 
-                <span className="mt-1 block font-[var(--font-jetbrains-mono)] text-sm text-white">
-                  {currentSpeedMs.toFixed(
-                    2,
-                  )}{" "}
-                  m/s
-                </span>
-              </div>
+                  <span className="font-[var(--font-jetbrains-mono)] text-[10px] text-white">
+                    {speedMs.toFixed(
+                      1,
+                    )}{" "}
+                    m/s
+                  </span>
+                </div>
 
-              <div>
-                <span className="block font-[var(--font-chakra-petch)] text-xs uppercase tracking-wide text-slate-400">
-                  Target Speed
-                </span>
-
-                <span className="mt-1 block font-[var(--font-jetbrains-mono)] text-sm text-white">
-                  {targetSpeedKmh.toFixed(
-                    1,
-                  )}{" "}
-                  km/h
-                </span>
+                <input
+                  id="kinetic-speed"
+                  type="range"
+                  min="0"
+                  max="40"
+                  step="0.5"
+                  value={speedMs}
+                  onChange={(
+                    event,
+                  ) =>
+                    setSpeedMs(
+                      Number(
+                        event
+                          .target
+                          .value,
+                      ),
+                    )
+                  }
+                  className="mt-3 w-full accent-[var(--color-brand-red)]"
+                />
               </div>
             </div>
           </Panel>
-        </div>
-      </div>
 
-      {/* =========================
-          PARAMETERS + CONTROL
-      ========================= */}
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <Panel>
-          <TechnicalLabel>
-            Parameters
-          </TechnicalLabel>
-
-          <div className="mt-6 space-y-8">
-            {/* MASS */}
-
+          <Panel
+            variant="dark"
+            className="flex min-w-[170px] flex-col justify-between border-slate-700/80 bg-slate-950/78 p-4 backdrop-blur-md sm:p-5"
+          >
             <div>
-              <div className="flex items-center justify-between gap-4">
-                <label
-                  htmlFor="kinetic-mass"
-                  className="font-[var(--font-chakra-petch)] text-xs font-semibold uppercase tracking-wide text-[var(--color-brand-charcoal)]"
-                >
-                  Mass
-                </label>
+              <TechnicalLabel>
+                Motion
+              </TechnicalLabel>
 
-                <span className="font-[var(--font-jetbrains-mono)] text-xs text-[var(--color-brand-muted)]">
-                  {massKg.toLocaleString(
-                    "en-US",
-                  )}{" "}
-                  kg
-                </span>
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="font-[var(--font-chakra-petch)] text-[9px] uppercase tracking-wide text-slate-500">
+                    Current
+                  </span>
+
+                  <span className="font-[var(--font-jetbrains-mono)] text-[10px] text-white">
+                    {currentSpeedMs.toFixed(
+                      1,
+                    )}{" "}
+                    m/s
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <span className="font-[var(--font-chakra-petch)] text-[9px] uppercase tracking-wide text-slate-500">
+                    Acceleration
+                  </span>
+
+                  <span className="font-[var(--font-jetbrains-mono)] text-[10px] text-white">
+                    {accelerationMs2.toFixed(
+                      1,
+                    )}{" "}
+                    m/s²
+                  </span>
+                </div>
               </div>
+            </div>
 
-              <input
-                id="kinetic-mass"
-                type="range"
-                min="600"
-                max="1800"
-                step="50"
-                value={massKg}
-                onChange={(event) =>
-                  setMassKg(
-                    Number(
-                      event
-                        .target
-                        .value,
-                    ),
-                  )
+            <div className="mt-4 flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                className="flex-1"
+                onClick={
+                  handlePlayPause
                 }
-                className="mt-4 w-full accent-[var(--color-brand-red)]"
-              />
-
-              <div className="mt-2 flex justify-between font-[var(--font-jetbrains-mono)] text-[10px] text-slate-400">
-                <span>
-                  600 kg
-                </span>
-
-                <span>
-                  1200 kg
-                </span>
-
-                <span>
-                  1800 kg
-                </span>
-              </div>
-            </div>
-
-            {/* VELOCITY */}
-
-            <div>
-              <div className="flex items-center justify-between gap-4">
-                <label
-                  htmlFor="kinetic-speed"
-                  className="font-[var(--font-chakra-petch)] text-xs font-semibold uppercase tracking-wide text-[var(--color-brand-charcoal)]"
-                >
-                  Target Velocity
-                </label>
-
-                <span className="font-[var(--font-jetbrains-mono)] text-xs text-[var(--color-brand-muted)]">
-                  {speedMs.toFixed(
-                    1,
-                  )}{" "}
-                  m/s
-                </span>
-              </div>
-
-              <input
-                id="kinetic-speed"
-                type="range"
-                min="0"
-                max="40"
-                step="0.5"
-                value={speedMs}
-                onChange={(event) =>
-                  setSpeedMs(
-                    Number(
-                      event
-                        .target
-                        .value,
-                    ),
-                  )
+                disabled={
+                  speedMs <= 0
                 }
-                className="mt-4 w-full accent-[var(--color-brand-red)]"
-              />
+              >
+                {isPlaying
+                  ? "Pause"
+                  : "Play"}
+              </Button>
 
-              <div className="mt-2 flex justify-between font-[var(--font-jetbrains-mono)] text-[10px] text-slate-400">
-                <span>
-                  0 m/s
-                </span>
-
-                <span>
-                  20 m/s
-                </span>
-
-                <span>
-                  40 m/s
-                </span>
-              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={
+                  handleReset
+                }
+              >
+                Reset
+              </Button>
             </div>
-          </div>
-        </Panel>
-
-        <Panel>
-          <TechnicalLabel>
-            Simulation Control
-          </TechnicalLabel>
-
-          <div className="mt-6 space-y-3">
-            <Button
-              type="button"
-              variant="primary"
-              className="w-full"
-              onClick={
-                handlePlayPause
-              }
-              disabled={
-                speedMs <= 0
-              }
-            >
-              {isPlaying
-                ? "Pause"
-                : "Play"}
-            </Button>
-
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full"
-              onClick={
-                handleReset
-              }
-            >
-              Reset
-            </Button>
-          </div>
-
-          <div className="mt-8 space-y-5 border-t border-slate-200 pt-6">
-            <div>
-              <span className="block font-[var(--font-chakra-petch)] text-xs uppercase tracking-wide text-[var(--color-brand-muted)]">
-                Current Speed
-              </span>
-
-              <span className="mt-1 block font-[var(--font-jetbrains-mono)] text-sm">
-                {currentSpeedKmh.toFixed(
-                  1,
-                )}{" "}
-                km/h
-              </span>
-            </div>
-
-            <div>
-              <span className="block font-[var(--font-chakra-petch)] text-xs uppercase tracking-wide text-[var(--color-brand-muted)]">
-                Wheel Angular Velocity
-              </span>
-
-              <span className="mt-1 block font-[var(--font-jetbrains-mono)] text-sm">
-                {wheelAngularVelocity.toFixed(
-                  2,
-                )}{" "}
-                rad/s
-              </span>
-            </div>
-
-            <div>
-              <span className="block font-[var(--font-chakra-petch)] text-xs uppercase tracking-wide text-[var(--color-brand-muted)]">
-                Visual Acceleration
-              </span>
-
-              <span className="mt-1 block font-[var(--font-jetbrains-mono)] text-sm">
-                {accelerationMs2.toFixed(
-                  2,
-                )}{" "}
-                m/s²
-              </span>
-            </div>
-          </div>
-        </Panel>
-      </div>
-
-      {/* =========================
-          FORMULA
-      ========================= */}
-
-      <Panel>
-        <TechnicalLabel>
-          Formula
-        </TechnicalLabel>
-
-        <div className="mt-6 bg-[var(--color-brand-charcoal)] p-6">
-          <p className="font-[var(--font-jetbrains-mono)] text-sm leading-relaxed text-white">
-            KE = ½mv²
-          </p>
-
-          <p className="mt-3 font-[var(--font-jetbrains-mono)] text-sm leading-relaxed text-slate-300">
-            = ½({massKg} kg)
-            × ({speedMs.toFixed(
-              2,
-            )}{" "}
-            m/s)²
-          </p>
-
-          <p className="mt-3 font-[var(--font-jetbrains-mono)] text-sm font-semibold leading-relaxed text-[var(--color-brand-red)]">
-            ={" "}
-            {kineticEnergyKJ.toFixed(
-              2,
-            )}{" "}
-            kJ
-          </p>
+          </Panel>
         </div>
-
-        <p className="mt-5 text-sm leading-relaxed text-[var(--color-brand-muted)]">
-          Kinetic energy is the energy
-          associated with the motion of an
-          object. Because velocity is squared,
-          increasing speed produces a larger
-          change in kinetic energy.
-        </p>
-      </Panel>
-    </div>
+      }
+    >
+      <SimulationCanvas
+        fullScreen
+        angularVelocity={
+          isPlaying
+            ? wheelAngularVelocity
+            : 0
+        }
+        motionSpeedMs={
+          isPlaying
+            ? currentSpeedMs
+            : 0
+        }
+        resetKey={resetKey}
+      >
+        <DustEffect
+          speedKmh={
+            isPlaying
+              ? currentSpeedKmh
+              : 0
+          }
+        />
+      </SimulationCanvas>
+    </SimulationShell>
   );
 }
