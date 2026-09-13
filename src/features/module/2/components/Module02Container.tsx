@@ -2,29 +2,51 @@
 
 import { useState } from "react";
 
+import { SimulationSceneNavigator } from "@/src/features/simulation/components/SimulationSceneNavigator";
+
 import { Scene03PistonWork } from "../scenes/Scene03PistonWork";
-
 import { Scene04PVWork } from "../scenes/Scene04PVWork";
-
 import { Scene05PowerRotation } from "../scenes/Scene05PowerRotation";
-
 import { Scene06HeatInternalEnergy } from "../scenes/Scene06HeatInternalEnergy";
-
 import { Scene07FirstLaw } from "../scenes/Scene07FirstLaw";
 
-import { Button } from "@/src/shared/components/Button";
+const SCENES = [
+  {
+    id: "piston-work",
+    label: "03 · Piston Work",
+  },
+  {
+    id: "pv-work",
+    label: "04 · P–V Work",
+  },
+  {
+    id: "power-rotation",
+    label: "05 · Power",
+  },
+  {
+    id: "heat-internal-energy",
+    label: "06 · Heat & Energy",
+  },
+  {
+    id: "first-law",
+    label: "07 · First Law",
+  },
+];
+
+type SceneId =
+  | "piston-work"
+  | "pv-work"
+  | "power-rotation"
+  | "heat-internal-energy"
+  | "first-law";
 
 export function Module02Container() {
   const [
     activeScene,
     setActiveScene,
-  ] = useState<
-    | "piston-work"
-    | "pv-work"
-    | "power-rotation"
-    | "heat-internal-energy"
-    | "first-law"
-  >("piston-work");
+  ] = useState<SceneId>(
+    "piston-work",
+  );
 
   return (
     <div className="relative">
@@ -53,107 +75,17 @@ export function Module02Container() {
         <Scene07FirstLaw />
       )}
 
-      <nav
-        aria-label="Module 02 scenes"
-        className="pointer-events-none absolute left-4 top-[76px] z-40 max-w-[calc(100%-32px)] overflow-x-auto sm:left-6 sm:top-[88px] lg:left-8"
-      >
-        <div className="pointer-events-auto flex min-w-max gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={
-              activeScene ===
-              "piston-work"
-                ? "primary"
-                : "secondary"
-            }
-            onClick={() =>
-              setActiveScene(
-                "piston-work",
-              )
-            }
-            className="border-slate-700/80 bg-slate-950/70 backdrop-blur-sm"
-          >
-            03 · Piston Work
-          </Button>
-
-          <Button
-            type="button"
-            size="sm"
-            variant={
-              activeScene ===
-              "pv-work"
-                ? "primary"
-                : "secondary"
-            }
-            onClick={() =>
-              setActiveScene(
-                "pv-work",
-              )
-            }
-            className="border-slate-700/80 bg-slate-950/70 backdrop-blur-sm"
-          >
-            04 · P–V Work
-          </Button>
-
-          <Button
-            type="button"
-            size="sm"
-            variant={
-              activeScene ===
-              "power-rotation"
-                ? "primary"
-                : "secondary"
-            }
-            onClick={() =>
-              setActiveScene(
-                "power-rotation",
-              )
-            }
-            className="border-slate-700/80 bg-slate-950/70 backdrop-blur-sm"
-          >
-            05 · Power
-          </Button>
-
-          <Button
-            type="button"
-            size="sm"
-            variant={
-              activeScene ===
-              "heat-internal-energy"
-                ? "primary"
-                : "secondary"
-            }
-            onClick={() =>
-              setActiveScene(
-                "heat-internal-energy",
-              )
-            }
-            className="border-slate-700/80 bg-slate-950/70 backdrop-blur-sm"
-          >
-            06 · Heat & Energy
-          </Button>
-
-          <Button
-            type="button"
-            size="sm"
-            variant={
-              activeScene ===
-              "first-law"
-                ? "primary"
-                : "secondary"
-            }
-            onClick={() =>
-              setActiveScene(
-                "first-law",
-              )
-            }
-            className="border-slate-700/80 bg-slate-950/70 backdrop-blur-sm"
-          >
-            07 · First Law
-          </Button>
-        </div>
-      </nav>
+      <SimulationSceneNavigator
+        scenes={SCENES}
+        activeScene={
+          activeScene
+        }
+        onChange={(sceneId) =>
+          setActiveScene(
+            sceneId as SceneId,
+          )
+        }
+      />
     </div>
   );
 }

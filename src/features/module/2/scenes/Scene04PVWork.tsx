@@ -6,33 +6,14 @@ import {
   useState,
 } from "react";
 
-import {
-  Button,
-} from "@/src/shared/components/Button";
+import { Button } from "@/src/shared/components/Button";
+import { Panel } from "@/src/shared/components/Panel";
+import { TechnicalLabel } from "@/src/shared/components/TechnicalLabel";
 
-import {
-  Panel,
-} from "@/src/shared/components/Panel";
-
-import {
-  TechnicalLabel,
-} from "@/src/shared/components/TechnicalLabel";
-
-import {
-  SimulationShell,
-} from "@/src/features/simulation/components/SimulationShell";
-
-import {
-  SimulationCanvas,
-} from "@/src/features/simulation/components/SimulationCanvas";
-
-import {
-  EngineMechanism,
-} from "@/src/features/simulation/components/EngineMechanism";
-
-import {
-  PVProcessVisualization,
-} from "@/src/features/simulation/components/PVProcessVisualization";
+import { SimulationShell } from "@/src/features/simulation/components/SimulationShell";
+import { SimulationCanvas } from "@/src/features/simulation/components/SimulationCanvas";
+import { EngineMechanism } from "@/src/features/simulation/components/EngineMechanism";
+import { PVProcessVisualization } from "@/src/features/simulation/components/PVProcessVisualization";
 
 import {
   calculatePVPath,
@@ -80,8 +61,7 @@ function mapVolumeToX(
 
   return (
     GRAPH_LEFT +
-    normalized *
-      width
+    normalized * width
   );
 }
 
@@ -102,15 +82,16 @@ function mapPressureToY(
   return (
     GRAPH_HEIGHT -
     GRAPH_BOTTOM -
-    normalized *
-      height
+    normalized * height
   );
 }
 
 function buildPath(
   points: ChartPoint[],
 ) {
-  if (points.length === 0) {
+  if (
+    points.length === 0
+  ) {
     return "";
   }
 
@@ -128,7 +109,9 @@ function buildPath(
 function buildAreaPath(
   points: ChartPoint[],
 ) {
-  if (points.length === 0) {
+  if (
+    points.length === 0
+  ) {
     return "";
   }
 
@@ -150,9 +133,7 @@ function buildAreaPath(
     ...points
       .slice(1)
       .map(
-        (
-          point,
-        ) =>
+        (point) =>
           `L ${point.x} ${point.y}`,
       ),
     `L ${last.x} ${baseline}`,
@@ -195,8 +176,7 @@ function PVGraph({
     Math.max(
       2,
       Math.ceil(
-        (allPoints.length -
-          1) *
+        (allPoints.length - 1) *
           progress,
       ) + 1,
     );
@@ -260,245 +240,238 @@ function PVGraph({
   ];
 
   return (
-    <div className="w-full">
-      <svg
-        viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
-        className="w-full"
+    <svg
+      viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
+      preserveAspectRatio="xMidYMid meet"
+      className="block h-auto w-full"
+    >
+      <rect
+        x="0"
+        y="0"
+        width={GRAPH_WIDTH}
+        height={GRAPH_HEIGHT}
+        fill="#0b1120"
+      />
+
+      {xTicks.map(
+        (tick) => {
+          const x =
+            mapVolumeToX(
+              tick,
+            );
+
+          return (
+            <line
+              key={`x-${tick}`}
+              x1={x}
+              y1={GRAPH_TOP}
+              x2={x}
+              y2={
+                GRAPH_HEIGHT -
+                GRAPH_BOTTOM
+              }
+              stroke="#334155"
+              strokeWidth="1"
+            />
+          );
+        },
+      )}
+
+      {yTicks.map(
+        (tick) => {
+          const y =
+            mapPressureToY(
+              tick,
+            );
+
+          return (
+            <line
+              key={`y-${tick}`}
+              x1={GRAPH_LEFT}
+              y1={y}
+              x2={
+                GRAPH_WIDTH -
+                GRAPH_RIGHT
+              }
+              y2={y}
+              stroke="#334155"
+              strokeWidth="1"
+            />
+          );
+        },
+      )}
+
+      <line
+        x1={GRAPH_LEFT}
+        y1={GRAPH_TOP}
+        x2={GRAPH_LEFT}
+        y2={
+          GRAPH_HEIGHT -
+          GRAPH_BOTTOM
+        }
+        stroke="#cbd5e1"
+        strokeWidth="1.5"
+      />
+
+      <line
+        x1={GRAPH_LEFT}
+        y1={
+          GRAPH_HEIGHT -
+          GRAPH_BOTTOM
+        }
+        x2={
+          GRAPH_WIDTH -
+          GRAPH_RIGHT
+        }
+        y2={
+          GRAPH_HEIGHT -
+          GRAPH_BOTTOM
+        }
+        stroke="#cbd5e1"
+        strokeWidth="1.5"
+      />
+
+      <path
+        d={areaPath}
+        fill="#22c55e"
+        fillOpacity="0.18"
+      />
+
+      <path
+        d={curvePath}
+        fill="none"
+        stroke="#f8fafc"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+
+      {currentPoint && (
+        <circle
+          cx={currentPoint.x}
+          cy={currentPoint.y}
+          r="5"
+          fill="#dc2626"
+          stroke="#ffffff"
+          strokeWidth="2"
+        />
+      )}
+
+      {xTicks.map(
+        (tick) => {
+          const x =
+            mapVolumeToX(
+              tick,
+            );
+
+          return (
+            <text
+              key={`xt-${tick}`}
+              x={x}
+              y={
+                GRAPH_HEIGHT -
+                GRAPH_BOTTOM +
+                20
+              }
+              textAnchor="middle"
+              fill="#64748b"
+              fontSize="9"
+              fontFamily="var(--font-jetbrains-mono)"
+            >
+              {tick.toFixed(
+                3,
+              )}
+            </text>
+          );
+        },
+      )}
+
+      {yTicks.map(
+        (tick) => {
+          const y =
+            mapPressureToY(
+              tick,
+            );
+
+          return (
+            <text
+              key={`yt-${tick}`}
+              x={
+                GRAPH_LEFT -
+                9
+              }
+              y={y + 3}
+              textAnchor="end"
+              fill="#64748b"
+              fontSize="9"
+              fontFamily="var(--font-jetbrains-mono)"
+            >
+              {tick}
+            </text>
+          );
+        },
+      )}
+
+      <text
+        x={GRAPH_WIDTH / 2}
+        y={GRAPH_HEIGHT - 10}
+        textAnchor="middle"
+        fill="#94a3b8"
+        fontSize="10"
+        fontFamily="var(--font-chakra-petch)"
       >
-        <rect
-          x="0"
-          y="0"
-          width={GRAPH_WIDTH}
-          height={GRAPH_HEIGHT}
-          fill="#0b1120"
-        />
+        VOLUME (m³)
+      </text>
 
-        {xTicks.map(
-          (tick) => {
-            const x =
-              mapVolumeToX(
-                tick,
-              );
+      <text
+        x="13"
+        y={GRAPH_HEIGHT / 2}
+        textAnchor="middle"
+        fill="#94a3b8"
+        fontSize="10"
+        fontFamily="var(--font-chakra-petch)"
+        transform={`rotate(-90 13 ${
+          GRAPH_HEIGHT / 2
+        })`}
+      >
+        PRESSURE (kPa)
+      </text>
 
-            return (
-              <line
-                key={`x-${tick}`}
-                x1={x}
-                y1={GRAPH_TOP}
-                x2={x}
-                y2={
-                  GRAPH_HEIGHT -
-                  GRAPH_BOTTOM
-                }
-                stroke="#334155"
-                strokeWidth="1"
-              />
-            );
-          },
-        )}
+      <text
+        x={
+          GRAPH_WIDTH -
+          GRAPH_RIGHT
+        }
+        y={GRAPH_TOP + 2}
+        textAnchor="end"
+        fill="#67e8f9"
+        fontSize="9"
+        fontFamily="var(--font-jetbrains-mono)"
+      >
+        P{" "}
+        {currentPressure.toFixed(
+          0,
+        )}{" "}
+        kPa
+      </text>
 
-        {yTicks.map(
-          (tick) => {
-            const y =
-              mapPressureToY(
-                tick,
-              );
-
-            return (
-              <line
-                key={`y-${tick}`}
-                x1={GRAPH_LEFT}
-                y1={y}
-                x2={
-                  GRAPH_WIDTH -
-                  GRAPH_RIGHT
-                }
-                y2={y}
-                stroke="#334155"
-                strokeWidth="1"
-              />
-            );
-          },
-        )}
-
-        <line
-          x1={GRAPH_LEFT}
-          y1={GRAPH_TOP}
-          x2={GRAPH_LEFT}
-          y2={
-            GRAPH_HEIGHT -
-            GRAPH_BOTTOM
-          }
-          stroke="#cbd5e1"
-          strokeWidth="1.5"
-        />
-
-        <line
-          x1={GRAPH_LEFT}
-          y1={
-            GRAPH_HEIGHT -
-            GRAPH_BOTTOM
-          }
-          x2={
-            GRAPH_WIDTH -
-            GRAPH_RIGHT
-          }
-          y2={
-            GRAPH_HEIGHT -
-            GRAPH_BOTTOM
-          }
-          stroke="#cbd5e1"
-          strokeWidth="1.5"
-        />
-
-        <path
-          d={areaPath}
-          fill="#22c55e"
-          fillOpacity="0.18"
-        />
-
-        <path
-          d={curvePath}
-          fill="none"
-          stroke="#f8fafc"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-
-        {currentPoint && (
-          <circle
-            cx={
-              currentPoint.x
-            }
-            cy={
-              currentPoint.y
-            }
-            r="5"
-            fill="#dc2626"
-            stroke="#ffffff"
-            strokeWidth="2"
-          />
-        )}
-
-        {xTicks.map(
-          (tick) => {
-            const x =
-              mapVolumeToX(
-                tick,
-              );
-
-            return (
-              <text
-                key={`xt-${tick}`}
-                x={x}
-                y={
-                  GRAPH_HEIGHT -
-                  GRAPH_BOTTOM +
-                  20
-                }
-                textAnchor="middle"
-                fill="#64748b"
-                fontSize="9"
-                fontFamily="var(--font-jetbrains-mono)"
-              >
-                {tick.toFixed(
-                  3,
-                )}
-              </text>
-            );
-          },
-        )}
-
-        {yTicks.map(
-          (tick) => {
-            const y =
-              mapPressureToY(
-                tick,
-              );
-
-            return (
-              <text
-                key={`yt-${tick}`}
-                x={
-                  GRAPH_LEFT -
-                  9
-                }
-                y={y + 3}
-                textAnchor="end"
-                fill="#64748b"
-                fontSize="9"
-                fontFamily="var(--font-jetbrains-mono)"
-              >
-                {tick}
-              </text>
-            );
-          },
-        )}
-
-        <text
-          x={
-            GRAPH_WIDTH / 2
-          }
-          y={
-            GRAPH_HEIGHT -
-            10
-          }
-          textAnchor="middle"
-          fill="#94a3b8"
-          fontSize="10"
-          fontFamily="var(--font-chakra-petch)"
-        >
-          VOLUME (m³)
-        </text>
-
-        <text
-          x="13"
-          y={
-            GRAPH_HEIGHT / 2
-          }
-          textAnchor="middle"
-          fill="#94a3b8"
-          fontSize="10"
-          fontFamily="var(--font-chakra-petch)"
-          transform={`rotate(-90 13 ${
-            GRAPH_HEIGHT / 2
-          })`}
-        >
-          PRESSURE (kPa)
-        </text>
-
-        <text
-          x={
-            GRAPH_WIDTH -
-            GRAPH_RIGHT
-          }
-          y={GRAPH_TOP + 2}
-          textAnchor="end"
-          fill="#67e8f9"
-          fontSize="9"
-          fontFamily="var(--font-jetbrains-mono)"
-        >
-          P {currentPressure.toFixed(0)} kPa
-        </text>
-
-        <text
-          x={
-            GRAPH_WIDTH -
-            GRAPH_RIGHT
-          }
-          y={
-            GRAPH_TOP +
-            15
-          }
-          textAnchor="end"
-          fill="#67e8f9"
-          fontSize="9"
-          fontFamily="var(--font-jetbrains-mono)"
-        >
-          V {currentVolume.toFixed(4)} m³
-        </text>
-      </svg>
-    </div>
+      <text
+        x={
+          GRAPH_WIDTH -
+          GRAPH_RIGHT
+        }
+        y={GRAPH_TOP + 15}
+        textAnchor="end"
+        fill="#67e8f9"
+        fontSize="9"
+        fontFamily="var(--font-jetbrains-mono)"
+      >
+        V{" "}
+        {currentVolume.toFixed(
+          4,
+        )}{" "}
+        m³
+      </text>
+    </svg>
   );
 }
 
@@ -546,6 +519,11 @@ export function Scene04PVWork() {
     setEngineFocus,
   ] = useState(false);
 
+  const [
+    graphOpen,
+    setGraphOpen,
+  ] = useState(false);
+
   const workKJ =
     calculatePVWork(
       p1KPa,
@@ -563,6 +541,10 @@ export function Scene04PVWork() {
     v1M3 +
     (v2M3 - v1M3) *
       progress;
+
+  const playbackRate =
+    0.8 +
+    progress * 0.8;
 
   const handlePlay = () => {
     if (
@@ -599,6 +581,7 @@ export function Scene04PVWork() {
     setProgress(0);
     setIsPlaying(false);
     setEngineFocus(false);
+    setGraphOpen(false);
   };
 
   const handleV1Change = (
@@ -640,8 +623,7 @@ export function Scene04PVWork() {
       return;
     }
 
-    let animationFrameId =
-      0;
+    let animationFrameId = 0;
 
     let lastTimestamp:
       | number
@@ -671,13 +653,10 @@ export function Scene04PVWork() {
         (current) => {
           const next =
             current +
-            delta /
-              duration;
+            delta / duration;
 
           if (next >= 1) {
-            setIsPlaying(
-              false,
-            );
+            setIsPlaying(false);
 
             return 1;
           }
@@ -730,12 +709,14 @@ export function Scene04PVWork() {
         </div>
       }
       bottomContent={
-        <div className="grid gap-2 lg:grid-cols-[0.9fr_1.7fr_auto]">
-          {/* WORK */}
+        <div className="grid w-full gap-2 lg:grid-cols-[0.72fr_1.9fr_auto]">
+          {/* =================================================
+              WORK
+          ================================================= */}
 
           <Panel
             variant="dark"
-            className="border-slate-700/80 bg-slate-950/78 p-3 backdrop-blur-md sm:p-4"
+            className="h-fit border-slate-700/80 bg-slate-950/78 p-3 backdrop-blur-md sm:p-4"
           >
             <TechnicalLabel accent="cyan">
               Work
@@ -758,11 +739,13 @@ export function Scene04PVWork() {
             </span>
           </Panel>
 
-          {/* PARAMETERS */}
+          {/* =================================================
+              PARAMETERS
+          ================================================= */}
 
           <Panel
             variant="dark"
-            className="border-slate-700/80 bg-slate-950/78 p-3 backdrop-blur-md sm:p-4"
+            className="h-fit border-slate-700/80 bg-slate-950/78 p-3 backdrop-blur-md sm:p-4"
           >
             <div className="grid gap-3 sm:grid-cols-4">
               <ParameterControl
@@ -795,7 +778,9 @@ export function Scene04PVWork() {
 
               <ParameterControl
                 label="V1"
-                value={`${v1M3.toFixed(4)} m³`}
+                value={`${v1M3.toFixed(
+                  4,
+                )} m³`}
                 min={0.001}
                 max={v2M3}
                 step={0.0001}
@@ -809,7 +794,9 @@ export function Scene04PVWork() {
 
               <ParameterControl
                 label="V2"
-                value={`${v2M3.toFixed(4)} m³`}
+                value={`${v2M3.toFixed(
+                  4,
+                )} m³`}
                 min={v1M3}
                 max={0.004}
                 step={0.0001}
@@ -823,195 +810,278 @@ export function Scene04PVWork() {
             </div>
           </Panel>
 
-          {/* CONTROL */}
+          {/* =================================================
+              ACTIONS
+          ================================================= */}
 
           <Panel
             variant="dark"
-            className="flex min-w-[180px] items-end gap-2 border-slate-700/80 bg-slate-950/78 p-3 backdrop-blur-md sm:p-4"
+            className="h-fit min-w-[230px] border-slate-700/80 bg-slate-950/78 p-3 backdrop-blur-md sm:p-4"
           >
-            <Button
-              type="button"
-              size="sm"
-              variant="primary"
-              className="flex-1"
-              onClick={
-                isPlaying
-                  ? handlePause
-                  : handlePlay
-              }
-            >
-              {isPlaying
-                ? "Pause"
-                : "Play"}
-            </Button>
+            <div className="grid w-full grid-cols-3 gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                onClick={
+                  isPlaying
+                    ? handlePause
+                    : handlePlay
+                }
+              >
+                {isPlaying
+                  ? "Pause"
+                  : "Play"}
+              </Button>
 
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={
-                handleReset
-              }
-            >
-              Reset
-            </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={
+                  handleReset
+                }
+              >
+                Reset
+              </Button>
 
-            <Button
-              type="button"
-              size="sm"
-              variant={
-                engineFocus
-                  ? "primary"
-                  : "dark"
-              }
-              onClick={() =>
-                setEngineFocus(
-                  (current) =>
-                    !current,
-                )
-              }
-            >
-              {engineFocus
-                ? "Exit"
-                : "Focus"}
-            </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={
+                  engineFocus
+                    ? "primary"
+                    : "secondary"
+                }
+                onClick={() =>
+                  setEngineFocus(
+                    (current) =>
+                      !current,
+                  )
+                }
+              >
+                {engineFocus
+                  ? "Exit"
+                  : "Focus"}
+              </Button>
+            </div>
           </Panel>
         </div>
       }
     >
-      <div className="absolute inset-0">
-        <SimulationCanvas
-          fullScreen
-          cameraFocus={
-            engineFocus
-              ? "engine"
-              : null
-          }
-          cameraPosition={[
-            5.2,
-            2.3,
-            5.6,
-          ]}
-          cameraTarget={[
-            0,
-            1.15,
-            -2.13,
-          ]}
-
-          engineRunning={
-            isPlaying
-          }
-
-          enginePlaybackRate={
-            0.8 +
-            progress * 0.8
-          }
-          
-          engineOverlay={
-            <PVProcessVisualization
-              pressureKPa={
-                currentPressure
-              }
-              volumeM3={
-                currentVolume
-              }
-              progress={
-                progress
-              }
-            />
-          }
-        >
-          <EngineMechanism
-            isPlaying={
-              isPlaying
+      <SimulationCanvas
+        fullScreen
+        cameraFocus={
+          engineFocus
+            ? "engine"
+            : null
+        }
+        cameraPosition={[
+          5.2,
+          2.3,
+          5.6,
+        ]}
+        cameraTarget={[
+          0,
+          1.15,
+          -2.13,
+        ]}
+        engineRunning={
+          isPlaying
+        }
+        enginePlaybackRate={
+          playbackRate
+        }
+        engineOverlay={
+          <PVProcessVisualization
+            pressureKPa={
+              currentPressure
             }
-            playbackRate={
-              0.8 +
-              progress *
-                0.8
+            volumeM3={
+              currentVolume
+            }
+            progress={
+              progress
             }
           />
-        </SimulationCanvas>
+        }
+      >
+        <EngineMechanism
+          isPlaying={
+            isPlaying
+          }
+          playbackRate={
+            playbackRate
+          }
+        />
+      </SimulationCanvas>
 
-        {/* P–V INSTRUMENT PANEL */}
+      {/* =====================================================
+          DESKTOP GRAPH
+          ≥ 1280px
+      ===================================================== */}
 
-        <div className="pointer-events-none absolute right-4 top-[92px] z-20 sm:right-6 lg:right-8">
-          <div className="pointer-events-auto w-[310px] border border-slate-700/80 bg-slate-950/78 p-3 shadow-2xl backdrop-blur-md sm:w-[360px]">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <TechnicalLabel accent="cyan">
-                P–V Diagram
-              </TechnicalLabel>
+      <div className="pointer-events-none absolute right-4 top-[7.5rem] z-30 hidden min-[1280px]:block">
+        <div className="pointer-events-auto w-[350px] border border-slate-700/90 bg-slate-950/90 p-3 shadow-2xl backdrop-blur-xl xl:w-[380px]">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <TechnicalLabel accent="cyan">
+              P–V Diagram
+            </TechnicalLabel>
 
-              <span className="font-[var(--font-jetbrains-mono)] text-[8px] uppercase text-slate-500">
-                Area = Work
-              </span>
-            </div>
-
-            <PVGraph
-              p1KPa={
-                p1KPa
-              }
-              p2KPa={
-                p2KPa
-              }
-              v1M3={
-                v1M3
-              }
-              v2M3={
-                v2M3
-              }
-              progress={
-                progress
-              }
-            />
+            <span className="font-[var(--font-jetbrains-mono)] text-[8px] uppercase text-slate-500">
+              Area = Work
+            </span>
           </div>
+
+          <PVGraph
+            p1KPa={p1KPa}
+            p2KPa={p2KPa}
+            v1M3={v1M3}
+            v2M3={v2M3}
+            progress={progress}
+          />
         </div>
+      </div>
 
-        {/* CURRENT STATE */}
+      {/* =====================================================
+          TABLET / MOBILE GRAPH TRIGGER
+          
+          LEFT LOWER ZONE
+          Keeps distance from:
+          - scene sidebar on right
+          - control button on right
+      ===================================================== */}
 
-        <div className="pointer-events-none absolute left-4 top-[170px] z-20 sm:left-6 lg:left-8">
-          <div
-            className="border border-slate-700/80 bg-slate-950/70 px-3 py-2 backdrop-blur-sm"
+      {!graphOpen && (
+        <div className="absolute bottom-[148px] left-3 z-[55] min-[1280px]:hidden sm:bottom-[132px] sm:left-5">
+          <button
+            type="button"
+            onClick={() =>
+              setGraphOpen(true)
+            }
+            aria-label="Open P–V graph"
+            className="border border-cyan-900/90 bg-slate-950/92 px-3 py-2.5 shadow-xl backdrop-blur-md transition-colors hover:border-cyan-500/70 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
             style={{
               clipPath:
                 "var(--clip-chamfer-sm)",
             }}
           >
-            <span className="block font-[var(--font-chakra-petch)] text-[8px] uppercase tracking-[0.14em] text-slate-500">
-              Current State
+            <span className="block font-[var(--font-chakra-petch)] text-[8px] font-semibold uppercase tracking-[0.14em] text-cyan-400">
+              P–V
             </span>
 
-            <div className="mt-2 grid grid-cols-2 gap-x-5 gap-y-1">
-              <StateValue
-                label="Pressure"
-                value={`${currentPressure.toFixed(0)} kPa`}
-              />
+            <span className="mt-0.5 block font-[var(--font-jetbrains-mono)] text-[7px] text-slate-500">
+              GRAPH
+            </span>
+          </button>
+        </div>
+      )}
 
-              <StateValue
-                label="Volume"
-                value={`${currentVolume.toFixed(4)} m³`}
-              />
+      {/* =====================================================
+          TABLET / MOBILE GRAPH OVERLAY
+          
+          Important:
+          - centered vertically
+          - no overflow-hidden around the SVG
+          - full graph remains visible
+          - panel itself is constrained, not the graph
+      ===================================================== */}
 
-              <StateValue
-                label="Progress"
-                value={`${(progress * 100).toFixed(0)}%`}
-              />
+      {graphOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Close P–V graph"
+            onClick={() =>
+              setGraphOpen(false)
+            }
+            className="absolute inset-0 z-[52] bg-slate-950/35 backdrop-blur-[2px] min-[1280px]:hidden"
+          />
 
-              <StateValue
-                label="Process"
-                value={
-                  progress >=
-                  1
-                    ? "COMPLETE"
-                    : isPlaying
-                      ? "RUNNING"
-                      : "READY"
-                }
-              />
+          <div className="absolute left-1/2 top-1/2 z-[55] w-[calc(100vw-24px)] max-w-[400px] -translate-x-1/2 -translate-y-1/2 min-[1280px]:hidden">
+            <div
+              className="max-h-[calc(100dvh-120px)] overflow-y-auto border border-slate-700/90 bg-slate-950/96 p-2.5 shadow-2xl backdrop-blur-xl sm:p-3"
+              style={{
+                clipPath:
+                  "var(--clip-chamfer-sm)",
+              }}
+            >
+              {/* HEADER */}
+
+              <div className="mb-1.5 flex items-center justify-between gap-3">
+                <TechnicalLabel accent="cyan">
+                  P–V Diagram
+                </TechnicalLabel>
+
+                <button
+                  type="button"
+                  aria-label="Close P–V graph"
+                  onClick={() =>
+                    setGraphOpen(
+                      false,
+                    )
+                  }
+                  className="flex h-7 w-7 shrink-0 items-center justify-center border border-slate-700 text-slate-400 transition-colors hover:border-slate-500 hover:text-white"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* GRAPH */}
+
+              <div className="w-full">
+                <PVGraph
+                  p1KPa={p1KPa}
+                  p2KPa={p2KPa}
+                  v1M3={v1M3}
+                  v2M3={v2M3}
+                  progress={
+                    progress
+                  }
+                />
+              </div>
+
+              {/* CURRENT STATE */}
+
+              <div className="mt-2 grid grid-cols-2 gap-1.5 border-t border-slate-800 pt-2">
+                <MiniState
+                  label="Pressure"
+                  value={`${currentPressure.toFixed(
+                    0,
+                  )} kPa`}
+                />
+
+                <MiniState
+                  label="Volume"
+                  value={`${currentVolume.toFixed(
+                    4,
+                  )} m³`}
+                />
+
+                <MiniState
+                  label="Progress"
+                  value={`${(
+                    progress * 100
+                  ).toFixed(
+                    0,
+                  )}%`}
+                />
+
+                <MiniState
+                  label="Process"
+                  value={
+                    progress >= 1
+                      ? "COMPLETE"
+                      : isPlaying
+                        ? "RUNNING"
+                        : "READY"
+                  }
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </SimulationShell>
   );
 }
@@ -1036,13 +1106,13 @@ function ParameterControl({
   ) => void;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <div className="flex items-center justify-between gap-2">
         <span className="font-[var(--font-chakra-petch)] text-[9px] font-semibold uppercase tracking-wide text-slate-400">
           {label}
         </span>
 
-        <span className="font-[var(--font-jetbrains-mono)] text-[8px] text-white">
+        <span className="shrink-0 font-[var(--font-jetbrains-mono)] text-[8px] text-white">
           {value}
         </span>
       </div>
@@ -1055,9 +1125,7 @@ function ParameterControl({
         value={
           numericValue
         }
-        onChange={(
-          event,
-        ) =>
+        onChange={(event) =>
           onChange(
             Number(
               event.target.value,
@@ -1070,7 +1138,7 @@ function ParameterControl({
   );
 }
 
-function StateValue({
+function MiniState({
   label,
   value,
 }: {
@@ -1078,12 +1146,12 @@ function StateValue({
   value: string;
 }) {
   return (
-    <div>
+    <div className="border border-slate-800 bg-slate-950/60 px-2 py-1">
       <span className="block font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-wide text-slate-500">
         {label}
       </span>
 
-      <span className="font-[var(--font-jetbrains-mono)] text-[9px] text-white">
+      <span className="truncate font-[var(--font-jetbrains-mono)] text-[8px] text-white">
         {value}
       </span>
     </div>

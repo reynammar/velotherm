@@ -2,81 +2,57 @@
 
 import { useState } from "react";
 
-import { Button } from "@/src/shared/components/Button";
+import { SimulationSceneNavigator } from "@/src/features/simulation/components/SimulationSceneNavigator";
 
 import { Scene01KineticEnergy } from "../scenes/Scene01KineticEnergy";
-
 import { Scene02PotentialEnergy } from "../scenes/Scene02PotentialEnergy";
 
-type ModuleScene =
-  | "kinetic"
-  | "potential";
+const SCENES = [
+  {
+    id: "kinetic-energy",
+    label: "01 · Kinetic Energy",
+  },
+  {
+    id: "potential-energy",
+    label: "02 · Potential Energy",
+  },
+];
+
+type SceneId =
+  | "kinetic-energy"
+  | "potential-energy";
 
 export function Module01Container() {
   const [
     activeScene,
     setActiveScene,
-  ] =
-    useState<ModuleScene>(
-      "kinetic",
-    );
+  ] = useState<SceneId>(
+    "kinetic-energy",
+  );
 
   return (
     <div className="relative">
       {activeScene ===
-        "kinetic" && (
+        "kinetic-energy" && (
         <Scene01KineticEnergy />
       )}
 
       {activeScene ===
-        "potential" && (
+        "potential-energy" && (
         <Scene02PotentialEnergy />
       )}
 
-      <nav
-        aria-label="Module 01 scenes"
-        className="pointer-events-none absolute left-4 top-[76px] z-40 max-w-[calc(100%-32px)] overflow-x-auto sm:left-6 sm:top-[88px] lg:left-8"
-      >
-        <div className="pointer-events-auto flex min-w-max gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={
-              activeScene ===
-              "kinetic"
-                ? "primary"
-                : "secondary"
-            }
-            onClick={() =>
-              setActiveScene(
-                "kinetic",
-              )
-            }
-            className="border-slate-700/80 bg-slate-950/70 backdrop-blur-sm"
-          >
-            01 · Kinetic
-          </Button>
-
-          <Button
-            type="button"
-            size="sm"
-            variant={
-              activeScene ===
-              "potential"
-                ? "primary"
-                : "secondary"
-            }
-            onClick={() =>
-              setActiveScene(
-                "potential",
-              )
-            }
-            className="border-slate-700/80 bg-slate-950/70 backdrop-blur-sm"
-          >
-            02 · Potential
-          </Button>
-        </div>
-      </nav>
+      <SimulationSceneNavigator
+        scenes={SCENES}
+        activeScene={
+          activeScene
+        }
+        onChange={(sceneId) =>
+          setActiveScene(
+            sceneId as SceneId,
+          )
+        }
+      />
     </div>
   );
 }

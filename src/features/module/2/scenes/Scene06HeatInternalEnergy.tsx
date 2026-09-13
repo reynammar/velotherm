@@ -7,7 +7,9 @@ import { Panel } from "@/src/shared/components/Panel";
 import { TechnicalLabel } from "@/src/shared/components/TechnicalLabel";
 
 import { SimulationShell } from "@/src/features/simulation/components/SimulationShell";
+
 import { SimulationCanvas } from "@/src/features/simulation/components/SimulationCanvas";
+
 import { EngineMechanism } from "@/src/features/simulation/components/EngineMechanism";
 
 import { HeatInternalEnergyVisualization } from "@/src/features/simulation/components/HeatInternalEnergyVisualization";
@@ -19,6 +21,7 @@ type HeatTransferMode =
   | "radiation";
 
 const DEFAULT_TEMPERATURE_K = 800;
+
 const DEFAULT_HEAT_RATE_KW = 5;
 
 export function Scene06HeatInternalEnergy() {
@@ -56,8 +59,7 @@ export function Scene06HeatInternalEnergy() {
   const temperatureNorm =
     Math.min(
       Math.max(
-        (temperatureK -
-          300) /
+        (temperatureK - 300) /
           900,
         0,
       ),
@@ -67,8 +69,7 @@ export function Scene06HeatInternalEnergy() {
   const thermalActivity =
     Math.round(
       20 +
-        temperatureNorm *
-          80,
+        temperatureNorm * 80,
     );
 
   const handleReset = () => {
@@ -80,11 +81,10 @@ export function Scene06HeatInternalEnergy() {
       DEFAULT_HEAT_RATE_KW,
     );
 
-    setMode(
-      "microscopic",
-    );
+    setMode("microscopic");
 
     setIsPlaying(false);
+
     setEngineFocus(false);
   };
 
@@ -92,8 +92,7 @@ export function Scene06HeatInternalEnergy() {
     setEngineFocus(true);
 
     setIsPlaying(
-      (current) =>
-        !current,
+      (current) => !current,
     );
   };
 
@@ -140,9 +139,13 @@ export function Scene06HeatInternalEnergy() {
       }
       bottomContent={
         <div className="grid gap-3 lg:grid-cols-[1fr_1.55fr_auto]">
+          {/* =================================================
+              INTERNAL ENERGY
+          ================================================= */}
+
           <Panel
             variant="dark"
-            className="border-slate-700/80 bg-slate-950/80 p-4 backdrop-blur-md sm:p-5"
+            className="h-fit border-slate-700/80 bg-slate-950/80 p-4 backdrop-blur-md sm:p-5"
           >
             <div className="flex items-center justify-between gap-3">
               <TechnicalLabel accent="cyan">
@@ -190,9 +193,13 @@ export function Scene06HeatInternalEnergy() {
             </div>
           </Panel>
 
+          {/* =================================================
+              THERMAL EXPERIMENT
+          ================================================= */}
+
           <Panel
             variant="dark"
-            className="border-slate-700/80 bg-slate-950/80 p-4 backdrop-blur-md sm:p-5"
+            className="h-fit border-slate-700/80 bg-slate-950/80 p-4 backdrop-blur-md sm:p-5"
           >
             <TechnicalLabel>
               Thermal Experiment
@@ -229,6 +236,13 @@ export function Scene06HeatInternalEnergy() {
                 }
               />
             </div>
+
+            {/* =================================================
+                VISUALIZATION MODES
+
+                2 columns on small screens.
+                4 columns when enough width exists.
+            ================================================= */}
 
             <div className="mt-6 border-t border-slate-700 pt-5">
               <TechnicalLabel>
@@ -290,6 +304,10 @@ export function Scene06HeatInternalEnergy() {
               </div>
             </div>
           </Panel>
+
+          {/* =================================================
+              ENGINE CONTROLS
+          ================================================= */}
 
           <Panel
             variant="dark"
@@ -442,13 +460,13 @@ function ParameterControl({
   ) => void;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <div className="flex items-center justify-between gap-3">
-        <span className="font-[var(--font-chakra-petch)] text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+        <span className="min-w-0 truncate font-[var(--font-chakra-petch)] text-[10px] font-semibold uppercase tracking-wide text-slate-300">
           {label}
         </span>
 
-        <span className="font-[var(--font-jetbrains-mono)] text-[10px] text-white">
+        <span className="shrink-0 font-[var(--font-jetbrains-mono)] text-[10px] text-white">
           {value}
         </span>
       </div>
@@ -458,7 +476,9 @@ function ParameterControl({
         min={min}
         max={max}
         step={step}
-        value={numericValue}
+        value={
+          numericValue
+        }
         onChange={(event) =>
           onChange(
             Number(
@@ -485,17 +505,22 @@ function ModeButton({
     <button
       type="button"
       onClick={onClick}
+      title={label}
       className={[
-        "border px-2 py-2",
+        "min-w-0 w-full overflow-hidden border px-2 py-2",
         "font-[var(--font-chakra-petch)]",
-        "text-[9px] font-semibold uppercase",
-        "tracking-wide transition-colors",
+        "text-[7px] font-semibold uppercase",
+        "tracking-[0.04em] leading-none",
+        "transition-colors duration-150",
+        "whitespace-nowrap",
         active
           ? "border-[var(--color-brand-red)] bg-[var(--color-brand-red)] text-white"
           : "border-slate-700 bg-slate-900/70 text-slate-400 hover:border-slate-500 hover:text-white",
       ].join(" ")}
     >
-      {label}
+      <span className="block w-full truncate">
+        {label}
+      </span>
     </button>
   );
 }
@@ -513,7 +538,7 @@ function Readout({
         {label}
       </span>
 
-      <span className="font-[var(--font-jetbrains-mono)] text-[9px] text-white">
+      <span className="max-w-[55%] truncate text-right font-[var(--font-jetbrains-mono)] text-[9px] text-white">
         {value}
       </span>
     </div>
