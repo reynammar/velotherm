@@ -5,8 +5,13 @@ import {
   type ReactNode,
 } from "react";
 
-import { Home } from "lucide-react";
-import { useRouter } from "next/navigation";
+import {
+  Home,
+} from "lucide-react";
+
+import {
+  useRouter,
+} from "next/navigation";
 
 type SimulationShellProps = {
   moduleLabel: string;
@@ -25,15 +30,38 @@ export function SimulationShell({
   bottomContent,
   children,
 }: SimulationShellProps) {
-  const router = useRouter();
+  const router =
+    useRouter();
 
+  /*
+   * =========================================================
+   * TABLET / MOBILE DRAWER STATE
+   * =========================================================
+   */
   const [
     controlsOpen,
     setControlsOpen,
   ] = useState(false);
 
+  /*
+   * =========================================================
+   * DESKTOP HUD STATE
+   * =========================================================
+   *
+   * Desktop starts open.
+   */
+  const [
+    desktopControlsOpen,
+    setDesktopControlsOpen,
+  ] = useState(true);
+
   const handleBackHome = () => {
     setControlsOpen(false);
+
+    setDesktopControlsOpen(
+      true,
+    );
+
     router.push("/");
   };
 
@@ -69,7 +97,9 @@ export function SimulationShell({
             <button
               type="button"
               aria-label="Back to homepage"
-              onClick={handleBackHome}
+              onClick={
+                handleBackHome
+              }
               className="pointer-events-auto flex h-9 w-9 shrink-0 items-center justify-center border border-slate-700/90 bg-slate-950/78 text-slate-400 shadow-lg backdrop-blur-md transition-all duration-200 hover:border-slate-500 hover:bg-slate-900 hover:text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-red)]/70 sm:h-10 sm:w-10"
               style={{
                 clipPath:
@@ -129,12 +159,12 @@ export function SimulationShell({
 
       {/* =====================================================
           CONTROL UI
-          
+
           Layer order:
 
           z-70 → drawer
           z-65 → drawer backdrop
-          z-55 → scene-specific graph overlays
+          z-55 → desktop show/hide handle
           z-50 → header / navigator / control trigger
           z-10 → screen overlay
           z-0  → 3D canvas
@@ -145,26 +175,138 @@ export function SimulationShell({
           {/* =================================================
               DESKTOP CONTROL HUD
               ≥ 1280px
+
+              IMPORTANT:
+              The panel configuration remains the same.
+              The hide button is now INSIDE the scaled
+              panel wrapper so it follows the actual
+              panel height automatically.
           ================================================= */}
 
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-50 hidden min-[1280px]:flex min-[1280px]:items-end min-[1280px]:justify-center">
-            <div className="pointer-events-auto flex w-full max-w-[1160px] items-end justify-center px-2 pb-0">
-              <div
-                className="w-full origin-bottom"
-                style={{
-                  transform:
-                    "scale(0.78)",
-                  transformOrigin:
-                    "bottom center",
-                }}
-              >
-                {bottomContent}
-              </div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-50 hidden min-[1280px]:block">
+            <div className="mx-auto flex w-full max-w-[1160px] items-end justify-center px-2">
+              {desktopControlsOpen ? (
+                <div className="pointer-events-auto relative w-full">
+                  {/* =========================================
+                      PANEL + ATTACHED HIDE HANDLE
+
+                      Both live inside the same wrapper.
+                      Therefore the handle always follows
+                      the real top edge of bottomContent,
+                      regardless of panel height.
+                  ========================================= */}
+
+                  <div
+                    className="relative w-full origin-bottom"
+                    style={{
+                      transform:
+                        "scale(0.78)",
+                      transformOrigin:
+                        "bottom center",
+                    }}
+                  >
+                    {/* =======================================
+                        HIDE HANDLE
+
+                        Directly attached to the top edge
+                        of the panel.
+                    ======================================= */}
+
+                    <button
+                      type="button"
+                      aria-expanded={
+                        desktopControlsOpen
+                      }
+                      aria-controls="desktop-simulation-controls"
+                      aria-label="Hide simulation controls"
+                      onClick={() =>
+                        setDesktopControlsOpen(
+                          false,
+                        )
+                      }
+                      className="group absolute left-1/2 top-0 z-[60] flex -translate-x-1/2 -translate-y-full items-center gap-1.5 border border-b-0 border-slate-700/90 bg-slate-950/95 px-3 py-1.5 shadow-lg backdrop-blur-md transition-colors hover:border-slate-500 hover:bg-slate-900"
+                      style={{
+                        clipPath:
+                          "var(--clip-chamfer-sm)",
+                      }}
+                    >
+                      <span className="font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.14em] text-slate-400 transition-colors group-hover:text-white">
+                        Hide
+                      </span>
+
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 12 12"
+                        className="h-2.5 w-2.5 text-slate-500 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:text-slate-200"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
+                        <path d="M2.5 7.5 6 4l3.5 3.5" />
+                      </svg>
+                    </button>
+
+                    {/* =======================================
+                        EXISTING BOTTOM CONTENT
+
+                        No sizing/layout change.
+                    ======================================= */}
+
+                    <div
+                      id="desktop-simulation-controls"
+                      className="w-full"
+                    >
+                      {bottomContent}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* =============================================
+                   DESKTOP SHOW HANDLE
+                ============================================= */
+
+                <button
+                  id="desktop-simulation-controls-show"
+                  type="button"
+                  aria-expanded={
+                    desktopControlsOpen
+                  }
+                  aria-controls="desktop-simulation-controls"
+                  aria-label="Show simulation controls"
+                  onClick={() =>
+                    setDesktopControlsOpen(
+                      true,
+                    )
+                  }
+                  className="pointer-events-auto absolute bottom-1 left-1/2 flex -translate-x-1/2 items-center gap-2 border border-slate-700/90 bg-slate-950/92 px-4 py-2 shadow-lg backdrop-blur-md transition-all duration-200 hover:border-slate-500 hover:bg-slate-900"
+                  style={{
+                    clipPath:
+                      "var(--clip-chamfer-sm)",
+                  }}
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 12 12"
+                    className="h-2.5 w-2.5 text-slate-500 transition-transform duration-200"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path d="m2.5 4.5 3.5 3.5 3.5-3.5" />
+                  </svg>
+
+                  <span className="font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.14em] text-slate-400 transition-colors hover:text-white">
+                    Show Controls
+                  </span>
+                </button>
+              )}
             </div>
           </div>
 
           {/* =================================================
               TABLET / MOBILE CONTROL TRIGGER
+
+              ORIGINAL CONFIGURATION PRESERVED
           ================================================= */}
 
           {!controlsOpen && (
@@ -174,7 +316,9 @@ export function SimulationShell({
                 aria-expanded={false}
                 aria-controls="simulation-controls-drawer"
                 onClick={() =>
-                  setControlsOpen(true)
+                  setControlsOpen(
+                    true,
+                  )
                 }
                 className="flex items-center gap-2 border border-slate-600/90 bg-slate-950/94 px-3 py-2.5 shadow-xl backdrop-blur-md transition-all duration-200 hover:border-slate-400 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-red)]/70 sm:px-4 sm:py-3"
                 style={{
@@ -197,6 +341,8 @@ export function SimulationShell({
 
           {/* =================================================
               DRAWER BACKDROP
+
+              ORIGINAL CONFIGURATION PRESERVED
           ================================================= */}
 
           {controlsOpen && (
@@ -204,7 +350,9 @@ export function SimulationShell({
               type="button"
               aria-label="Close simulation controls"
               onClick={() =>
-                setControlsOpen(false)
+                setControlsOpen(
+                  false,
+                )
               }
               className="absolute inset-0 z-[65] bg-slate-950/30 backdrop-blur-[2px] min-[1280px]:hidden"
             />
@@ -212,11 +360,15 @@ export function SimulationShell({
 
           {/* =================================================
               TABLET / MOBILE DRAWER
+
+              ORIGINAL CONFIGURATION PRESERVED
           ================================================= */}
 
           <aside
             id="simulation-controls-drawer"
-            aria-hidden={!controlsOpen}
+            aria-hidden={
+              !controlsOpen
+            }
             className={[
               "absolute inset-x-0 bottom-0 z-[70] min-[1280px]:hidden",
               "transform-gpu transition-transform duration-300 ease-out",
@@ -251,7 +403,9 @@ export function SimulationShell({
                     type="button"
                     aria-label="Close simulation controls"
                     onClick={() =>
-                      setControlsOpen(false)
+                      setControlsOpen(
+                        false,
+                      )
                     }
                     className="flex h-7 w-7 shrink-0 items-center justify-center border border-slate-700 text-slate-400 transition-colors hover:border-slate-500 hover:text-white sm:h-8 sm:w-8"
                   >

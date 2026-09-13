@@ -26,6 +26,10 @@ import type {
   CarFocusComponent,
 } from "@/src/features/simulation/components/CarModel";
 
+import {
+  calculateEnergyConversion,
+} from "@/src/lib/physics/energyConversion";
+
 const DEFAULT_PLAYBACK_RATE =
   0.8;
 
@@ -34,6 +38,12 @@ const MIN_PLAYBACK_RATE =
 
 const MAX_PLAYBACK_RATE =
   1.8;
+
+const DEFAULT_INPUT_POWER_KW =
+  60;
+
+const DEFAULT_EFFICIENCY =
+  0.82;
 
 const CYCLE_DURATION_MS =
   4000;
@@ -191,7 +201,8 @@ function getRelationshipInfo(
         title:
           "CONNECTING ROD 01",
         shortTitle: "R01",
-        category: "LINKAGE",
+        category:
+          "LINKAGE",
         connected: [
           "PISTON 01",
           "CRANKSHAFT",
@@ -205,7 +216,8 @@ function getRelationshipInfo(
         title:
           "CONNECTING ROD 02",
         shortTitle: "R02",
-        category: "LINKAGE",
+        category:
+          "LINKAGE",
         connected: [
           "PISTON 02",
           "CRANKSHAFT",
@@ -219,7 +231,8 @@ function getRelationshipInfo(
         title:
           "CONNECTING ROD 03",
         shortTitle: "R03",
-        category: "LINKAGE",
+        category:
+          "LINKAGE",
         connected: [
           "PISTON 03",
           "CRANKSHAFT",
@@ -233,7 +246,8 @@ function getRelationshipInfo(
         title:
           "CONNECTING ROD 04",
         shortTitle: "R04",
-        category: "LINKAGE",
+        category:
+          "LINKAGE",
         connected: [
           "PISTON 04",
           "CRANKSHAFT",
@@ -294,18 +308,34 @@ function getCycleStage(
   progress: number,
 ) {
   if (progress < 0.25) {
-    return "INTAKE";
+    return {
+      name: "INTAKE",
+      description:
+        "The piston moves through the intake phase.",
+    };
   }
 
   if (progress < 0.5) {
-    return "COMPRESSION";
+    return {
+      name: "COMPRESSION",
+      description:
+        "The piston moves through the compression phase.",
+    };
   }
 
   if (progress < 0.75) {
-    return "POWER";
+    return {
+      name: "POWER",
+      description:
+        "The power phase produces the main expansion-driven motion.",
+    };
   }
 
-  return "EXHAUST";
+  return {
+    name: "EXHAUST",
+    description:
+      "The piston moves through the exhaust phase.",
+  };
 }
 
 function isEngineInternal(
@@ -332,6 +362,20 @@ function isEngineInternal(
     component ===
       "rod4"
   );
+}
+
+function getEfficiencyDescription(
+  efficiency: number,
+) {
+  if (efficiency >= 0.85) {
+    return "High conversion efficiency";
+  }
+
+  if (efficiency >= 0.7) {
+    return "Moderate conversion efficiency";
+  }
+
+  return "Lower conversion efficiency";
 }
 
 export function Scene09InternalEngineARView() {
@@ -366,16 +410,70 @@ export function Scene09InternalEngineARView() {
   ] = useState(false);
 
   const [
+    inputPowerKw,
+    setInputPowerKw,
+  ] = useState(
+    DEFAULT_INPUT_POWER_KW,
+  );
+
+  const [
+    efficiency,
+    setEfficiency,
+  ] = useState(
+    DEFAULT_EFFICIENCY,
+  );
+
+  const [
     resetKey,
     setResetKey,
   ] = useState(0);
+
+  const conversion =
+    useMemo(
+      () =>
+        calculateEnergyConversion(
+          inputPowerKw,
+          efficiency,
+        ),
+      [
+        efficiency,
+        inputPowerKw,
+      ],
+    );
+
+  const cycleStage =
+    getCycleStage(
+      cycleProgress,
+    );
+
+  const cycleAngle =
+    cycleProgress *
+    720;
+
+  const relationship =
+    useMemo(
+      () =>
+        getRelationshipInfo(
+          selectedComponent,
+        ),
+      [
+        selectedComponent,
+      ],
+    );
+
+  const cameraFocus =
+    internalView
+      ? selectedComponent ??
+        "engine"
+      : null;
 
   useEffect(() => {
     if (!isPlaying) {
       return;
     }
 
-    let animationFrameId = 0;
+    let animationFrameId =
+      0;
 
     let previousTimestamp:
       | number
@@ -430,32 +528,6 @@ export function Scene09InternalEngineARView() {
     playbackRate,
   ]);
 
-  const cycleAngle =
-    cycleProgress *
-    720;
-
-  const cycleStage =
-    getCycleStage(
-      cycleProgress,
-    );
-
-  const relationship =
-    useMemo(
-      () =>
-        getRelationshipInfo(
-          selectedComponent,
-        ),
-      [
-        selectedComponent,
-      ],
-    );
-
-  const cameraFocus =
-    internalView
-      ? selectedComponent ??
-        "engine"
-      : null;
-
   const handleModelSelect =
     (
       component: CarFocusComponent,
@@ -490,6 +562,18 @@ export function Scene09InternalEngineARView() {
       );
     };
 
+  const handleToggleRun =
+    () => {
+      setInternalView(
+        true,
+      );
+
+      setIsPlaying(
+        (current) =>
+          !current,
+      );
+    };
+
   const handleInternalView =
     () => {
       setInternalView(
@@ -520,21 +604,17 @@ export function Scene09InternalEngineARView() {
 
       setInternalView(false);
 
+      setInputPowerKw(
+        DEFAULT_INPUT_POWER_KW,
+      );
+
+      setEfficiency(
+        DEFAULT_EFFICIENCY,
+      );
+
       setResetKey(
         (current) =>
           current + 1,
-      );
-    };
-
-  const handleRun =
-    () => {
-      setInternalView(
-        true,
-      );
-
-      setIsPlaying(
-        (current) =>
-          !current,
       );
     };
 
@@ -551,7 +631,7 @@ export function Scene09InternalEngineARView() {
     <SimulationShell
       moduleLabel="Module 03"
       sceneNumber="09"
-      sceneLabel="Interactive Engine Anatomy"
+      sceneLabel="Cycles & Efficiency"
       topRight={
         <div
           className="border border-slate-700/80 bg-slate-950/75 px-3 py-2 backdrop-blur-sm sm:px-4"
@@ -563,10 +643,10 @@ export function Scene09InternalEngineARView() {
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="min-w-0">
               <span className="block font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-[0.14em] text-slate-500 sm:text-[8px]">
-                Selected
+                Part
               </span>
 
-              <span className="block max-w-[110px] truncate font-[var(--font-oswald)] text-lg font-semibold text-white sm:max-w-[150px] sm:text-xl">
+              <span className="block max-w-[120px] truncate font-[var(--font-oswald)] text-lg font-semibold text-white sm:max-w-[160px] sm:text-xl">
                 {
                   relationship.shortTitle
                 }
@@ -591,18 +671,18 @@ export function Scene09InternalEngineARView() {
         </div>
       }
       bottomContent={
-        <div className="grid w-full items-end gap-2 lg:grid-cols-[1.05fr_1.5fr_auto]">
+        <div className="grid w-full items-end gap-2 lg:grid-cols-[1.18fr_1.45fr_0.88fr]">
           {/* =================================================
-              COMPONENT
+              ENGINE ANATOMY
           ================================================= */}
 
           <Panel
             variant="dark"
-            className="h-fit min-w-0 border-slate-700/80 bg-slate-950/80 p-3 backdrop-blur-md sm:p-3.5"
+            className="h-fit min-w-0 overflow-hidden border-slate-700/80 bg-slate-950/80 p-3 backdrop-blur-md sm:p-3.5"
           >
             <div className="flex items-center justify-between gap-3">
               <TechnicalLabel accent="cyan">
-                Component
+                Engine Anatomy
               </TechnicalLabel>
 
               <span className="max-w-[120px] truncate font-[var(--font-jetbrains-mono)] text-[7px] uppercase tracking-wide text-cyan-400">
@@ -628,8 +708,8 @@ export function Scene09InternalEngineARView() {
                   Quick Select
                 </span>
 
-                <span className="shrink-0 font-[var(--font-jetbrains-mono)] text-[6px] text-slate-600">
-                  MODEL
+                <span className="font-[var(--font-jetbrains-mono)] text-[6px] text-slate-600">
+                  9 PARTS
                 </span>
               </div>
 
@@ -680,7 +760,7 @@ export function Scene09InternalEngineARView() {
               </div>
             </div>
 
-            {/* CONNECTIONS */}
+            {/* CONNECTION */}
 
             <div className="mt-2.5 flex min-w-0 flex-wrap gap-1.5">
               {relationship.connected.map(
@@ -698,19 +778,27 @@ export function Scene09InternalEngineARView() {
                 ),
               )}
             </div>
+
+            <p className="mt-2 font-[var(--font-jetbrains-mono)] text-[7px] leading-relaxed text-slate-500">
+              {
+                relationship.role
+              }
+            </p>
           </Panel>
 
           {/* =================================================
-              ENGINE CYCLE
+              CYCLE + EFFICIENCY
           ================================================= */}
 
           <Panel
             variant="dark"
-            className="h-fit min-w-0 border-slate-700/80 bg-slate-950/80 p-3 backdrop-blur-md sm:p-3.5"
+            className="h-fit min-w-0 overflow-hidden border-slate-700/80 bg-slate-950/80 p-3 backdrop-blur-md sm:p-3.5"
           >
+            {/* 4-STROKE CYCLE */}
+
             <div className="flex items-center justify-between gap-3">
               <TechnicalLabel>
-                Engine Cycle
+                4-Stroke Cycle
               </TechnicalLabel>
 
               <span className="shrink-0 font-[var(--font-jetbrains-mono)] text-[8px] text-cyan-400">
@@ -753,25 +841,64 @@ export function Scene09InternalEngineARView() {
               <span>720°</span>
             </div>
 
+            {/* FOUR STAGES */}
+
+            <div className="mt-3 grid grid-cols-4 gap-1.5">
+              {[
+                "INTAKE",
+                "COMPRESSION",
+                "POWER",
+                "EXHAUST",
+              ].map(
+                (stage) => {
+                  const active =
+                    cycleStage.name ===
+                    stage;
+
+                  return (
+                    <div
+                      key={
+                        stage
+                      }
+                      className={[
+                        "min-w-0 overflow-hidden border px-1.5 py-1.5 text-center",
+                        active
+                          ? "border-cyan-400/70 bg-cyan-500/10 text-cyan-300"
+                          : "border-slate-800 bg-slate-950/50 text-slate-600",
+                      ].join(
+                        " ",
+                      )}
+                    >
+                      <span className="block truncate font-[var(--font-jetbrains-mono)] text-[6px] font-semibold">
+                        {
+                          stage
+                        }
+                      </span>
+                    </div>
+                  );
+                },
+              )}
+            </div>
+
             <div className="mt-2.5 flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="shrink-0 font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-wide text-slate-500">
-                  Stage
+              <div className="min-w-0">
+                <span className="block font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-wide text-slate-500">
+                  Current Stage
                 </span>
 
-                <span className="truncate font-[var(--font-jetbrains-mono)] text-[8px] font-semibold text-white">
+                <span className="mt-0.5 block truncate font-[var(--font-jetbrains-mono)] text-[8px] font-semibold text-white">
                   {
-                    cycleStage
+                    cycleStage.name
                   }
                 </span>
               </div>
 
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-wide text-slate-500">
-                  Speed
+              <div className="min-w-0 text-right">
+                <span className="block font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-wide text-slate-500">
+                  Animation
                 </span>
 
-                <span className="font-[var(--font-jetbrains-mono)] text-[8px] font-semibold text-white">
+                <span className="mt-0.5 block font-[var(--font-jetbrains-mono)] text-[8px] font-semibold text-white">
                   {playbackRate.toFixed(
                     2,
                   )}
@@ -780,34 +907,87 @@ export function Scene09InternalEngineARView() {
               </div>
             </div>
 
-            <input
-              type="range"
-              min={
-                MIN_PLAYBACK_RATE
-              }
-              max={
-                MAX_PLAYBACK_RATE
-              }
-              step={0.05}
-              value={
-                playbackRate
-              }
-              onChange={(
-                event,
-              ) =>
-                setPlaybackRate(
-                  Number(
-                    event.target
-                      .value,
-                  ),
-                )
-              }
-              className="mt-1.5 w-full accent-[var(--color-brand-red)]"
-            />
+            {/* EFFICIENCY */}
+
+            <div className="mt-3 border-t border-slate-800 pt-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <TechnicalLabel accent="cyan">
+                  Efficiency
+                </TechnicalLabel>
+
+                <span className="shrink-0 font-[var(--font-oswald)] text-xl font-semibold text-cyan-300">
+                  {(
+                    efficiency *
+                    100
+                  ).toFixed(
+                    0,
+                  )}
+                  %
+                </span>
+              </div>
+
+              <input
+                type="range"
+                min={0.5}
+                max={0.95}
+                step={0.01}
+                value={
+                  efficiency
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setEfficiency(
+                    Number(
+                      event.target
+                        .value,
+                    ),
+                  )
+                }
+                className="mt-2 w-full accent-[var(--color-brand-red)]"
+              />
+
+              <div className="mt-2 grid grid-cols-3 gap-3">
+                <EnergyReadout
+                  label="Input"
+                  value={`${inputPowerKw.toFixed(
+                    0,
+                  )} kW`}
+                />
+
+                <EnergyReadout
+                  label="Useful"
+                  value={`${conversion.outputPowerKw.toFixed(
+                    1,
+                  )} kW`}
+                />
+
+                <EnergyReadout
+                  label="Loss"
+                  value={`${conversion.lossPowerKw.toFixed(
+                    1,
+                  )} kW`}
+                />
+              </div>
+
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate font-[var(--font-jetbrains-mono)] text-[6px] text-slate-600">
+                  Pout = Pin × η
+                </span>
+
+                <span className="shrink-0 font-[var(--font-jetbrains-mono)] text-[6px] uppercase text-slate-500">
+                  {
+                    getEfficiencyDescription(
+                      efficiency,
+                    )
+                  }
+                </span>
+              </div>
+            </div>
           </Panel>
 
           {/* =================================================
-              TOOLS
+              CONTROLS
           ================================================= */}
 
           <Panel
@@ -815,16 +995,16 @@ export function Scene09InternalEngineARView() {
             className="h-fit min-w-[205px] max-w-full overflow-hidden border-slate-700/80 bg-slate-950/80 p-3 backdrop-blur-md sm:p-3.5"
           >
             <TechnicalLabel>
-              Tools
+              Controls
             </TechnicalLabel>
 
-            <div className="mt-2.5 grid min-w-0 grid-cols-3 gap-2">
+            <div className="mt-2.5 grid grid-cols-3 gap-2">
               <Button
                 type="button"
                 size="sm"
                 variant="primary"
                 onClick={
-                  handleRun
+                  handleToggleRun
                 }
               >
                 <span className="block min-w-0 truncate">
@@ -867,15 +1047,100 @@ export function Scene09InternalEngineARView() {
               </Button>
             </div>
 
-            <div className="mt-2.5 flex min-w-0 items-center gap-2 border-t border-slate-800 pt-2.5">
-              <span className="shrink-0 font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-[0.12em] text-slate-500">
-                Interaction
+            {/* CYCLE SPEED */}
+
+            <div className="mt-3 border-t border-slate-800 pt-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-[0.12em] text-slate-500">
+                  Cycle Speed
+                </span>
+
+                <span className="font-[var(--font-jetbrains-mono)] text-[8px] text-white">
+                  {playbackRate.toFixed(
+                    2,
+                  )}
+                  ×
+                </span>
+              </div>
+
+              <input
+                type="range"
+                min={
+                  MIN_PLAYBACK_RATE
+                }
+                max={
+                  MAX_PLAYBACK_RATE
+                }
+                step={0.05}
+                value={
+                  playbackRate
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setPlaybackRate(
+                    Number(
+                      event.target
+                        .value,
+                    ),
+                  )
+                }
+                className="mt-1.5 w-full accent-[var(--color-brand-red)]"
+              />
+            </div>
+
+            {/* INPUT POWER */}
+
+            <div className="mt-3 border-t border-slate-800 pt-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-[0.12em] text-slate-500">
+                  Input Power
+                </span>
+
+                <span className="font-[var(--font-jetbrains-mono)] text-[8px] text-white">
+                  {
+                    inputPowerKw
+                  }{" "}
+                  kW
+                </span>
+              </div>
+
+              <input
+                type="range"
+                min={20}
+                max={120}
+                step={5}
+                value={
+                  inputPowerKw
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setInputPowerKw(
+                    Number(
+                      event.target
+                        .value,
+                    ),
+                  )
+                }
+                className="mt-1.5 w-full accent-[var(--color-brand-red)]"
+              />
+            </div>
+
+            {/* INSTRUCTION */}
+
+            <div className="mt-3 border-t border-slate-800 pt-2.5">
+              <span className="block font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-[0.12em] text-slate-500">
+                Explore
               </span>
 
-              <span className="min-w-0 truncate font-[var(--font-jetbrains-mono)] text-[7px] text-slate-500">
-                Click model marker or Quick
-                Select.
-              </span>
+              <p className="mt-1 font-[var(--font-jetbrains-mono)] text-[7px] leading-relaxed text-slate-500">
+                Run the cycle, scrub
+                0–720°, then select a
+                piston, connecting rod,
+                or crankshaft to inspect
+                its role.
+              </p>
             </div>
           </Panel>
         </div>
@@ -886,69 +1151,78 @@ export function Scene09InternalEngineARView() {
         resetKey={
           resetKey
         }
+
         cameraFocus={
           cameraFocus
         }
 
         /**
-         * Keep the engine view slightly
-         * above the bottom HUD.
+         * Keeps the engine above the
+         * bottom control panel.
          */
         focusVerticalOffset={
-          0.72
+          0.68
         }
 
         /**
-         * Keep a medium front-engine
-         * inspection distance.
+         * Deliberately farther than the
+         * previous Scene 09 version.
+         *
+         * The user can still manually
+         * zoom closer afterward.
          */
         focusDistanceMultiplier={
-          2.15
+          2.45
         }
 
         focusMinimumDistance={
-          2.35
+          2.65
         }
 
         /**
-         * Small frontward adjustment only.
-         * No aggressive camera push.
+         * Small frontward adjustment.
+         *
+         * This is intentionally subtle,
+         * avoiding the previous aggressive
+         * push toward the selected component.
          */
         focusCameraOffset={[
           0,
-          0.03,
-          -0.18,
+          0.05,
+          -0.15,
         ]}
 
         /**
-         * User can still manually zoom
-         * closer after entering the view,
-         * but the automatic focus will not
-         * start extremely close.
+         * Manual zoom remains available.
          */
         minDistance={
-          2.0
+          2
         }
+
         maxDistance={
           14
         }
 
         cameraPosition={[
-          5.2,
-          2.15,
-          5.35,
+          6.2,
+          2.45,
+          6.5,
         ]}
+
         cameraTarget={[
           0,
-          1.1,
-          -2.13,
+          1.15,
+          -1.15,
         ]}
+
         engineRunning={
           isPlaying
         }
+
         enginePlaybackRate={
           playbackRate
         }
+
         onNodeSelect={
           handleModelSelect
         }
@@ -975,5 +1249,25 @@ export function Scene09InternalEngineARView() {
         />
       </SimulationCanvas>
     </SimulationShell>
+  );
+}
+
+function EnergyReadout({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <span className="block truncate font-[var(--font-chakra-petch)] text-[6px] uppercase tracking-wide text-slate-600">
+        {label}
+      </span>
+
+      <span className="mt-0.5 block truncate font-[var(--font-jetbrains-mono)] text-[8px] text-white">
+        {value}
+      </span>
+    </div>
   );
 }

@@ -127,41 +127,40 @@ export type SimulationCanvasProps = {
 
   showFloor?: boolean;
 
+  /**
+   * Completely hides the car model.
+   *
+   * Keep this false unless a scene explicitly
+   * needs the vehicle removed from the visual.
+   */
+  showCarModel?: boolean;
+
+  /**
+   * Applies the existing engine-focus material
+   * treatment while keeping the complete car
+   * model visible.
+   *
+   * The vehicle body becomes transparent while
+   * focused/internal components remain visible.
+   */
+  transparentCar?: boolean;
+
   cameraFocus?: CameraFocus;
 
   focusVerticalOffset?: number;
 
-  /**
-   * Controls automatic camera distance
-   * when entering focus mode.
-   *
-   * Lower = closer.
-   */
   focusDistanceMultiplier?: number;
 
-  /**
-   * Minimum distance used by the automatic
-   * focus transition.
-   */
   focusMinimumDistance?: number;
 
-  /**
-   * Additional camera position offset.
-   */
   focusCameraOffset?: [
     number,
     number,
     number,
   ];
 
-  /**
-   * Manual orbit minimum zoom distance.
-   */
   minDistance?: number;
 
-  /**
-   * Manual orbit maximum zoom distance.
-   */
   maxDistance?: number;
 
   fullScreen?: boolean;
@@ -440,15 +439,6 @@ function CameraFocusController({
           new Vector3(),
         );
 
-      /**
-       * Keep the camera focused on the
-       * overall engine mechanism rather
-       * than the tiny selected component.
-       *
-       * This prevents the camera from
-       * aggressively zooming into a piston
-       * or connecting rod.
-       */
       const calculatedDistance =
         size.length() *
         focusDistanceMultiplier;
@@ -469,8 +459,8 @@ function CameraFocusController({
         0.01
       ) {
         direction.set(
-          1,
-          0.35,
+          0.85,
+          0.3,
           1,
         );
       }
@@ -508,7 +498,9 @@ function CameraFocusController({
         true;
     }
 
-    if (leavingFocus) {
+    if (
+      leavingFocus
+    ) {
       startCameraRef.current.copy(
         camera.position,
       );
@@ -570,17 +562,20 @@ function CameraFocusController({
       performance.now() -
       startTime;
 
-    const duration = 850;
+    const duration =
+      700;
 
     const progress =
       Math.min(
-        elapsed / duration,
+        elapsed /
+          duration,
         1,
       );
 
     const smoothProgress =
       1 -
-      (1 - progress) ** 3;
+      (1 -
+        progress) ** 3;
 
     camera.position.lerpVectors(
       startCameraRef.current,
@@ -596,7 +591,10 @@ function CameraFocusController({
 
     controls.update();
 
-    if (progress >= 1) {
+    if (
+      progress >=
+      1
+    ) {
       transitioningRef.current =
         false;
 
@@ -633,29 +631,27 @@ export function SimulationCanvas({
   ],
 
   cameraPosition = [
-    4.8,
-    2.2,
-    4.3,
+    6.2,
+    2.45,
+    6.5,
   ],
 
   cameraTarget = [
     0,
     1.15,
-    -2.13,
+    -1.15,
   ],
 
   showFloor = true,
+
+  showCarModel = true,
+
+  transparentCar = false,
 
   cameraFocus = null,
 
   focusVerticalOffset = 0,
 
-  /**
-   * More conservative default focus.
-   *
-   * This keeps existing scenes visually
-   * close to their current behavior.
-   */
   focusDistanceMultiplier = 2.4,
 
   focusMinimumDistance = 2.5,
@@ -734,6 +730,19 @@ export function SimulationCanvas({
       ? "h-full w-full"
       : "h-[420px] w-full sm:h-[500px] lg:h-[560px]";
 
+  /**
+   * Engine focus can be activated
+   * independently from camera focus.
+   *
+   * This is what allows Scene 10 to show
+   * a ghosted vehicle while keeping the
+   * normal vehicle camera framing.
+   */
+  const shouldTransparentCar =
+    transparentCar ||
+    cameraFocus ===
+      "engine";
+
   return (
     <div
       className={`${viewportClass} bg-[var(--color-brand-charcoal)]`}
@@ -744,7 +753,10 @@ export function SimulationCanvas({
             cameraPosition,
           fov: 42,
         }}
-        dpr={[1, 2]}
+        dpr={[
+          1,
+          2,
+        ]}
       >
         <color
           attach="background"
@@ -754,7 +766,9 @@ export function SimulationCanvas({
         />
 
         <ambientLight
-          intensity={1.2}
+          intensity={
+            1.2
+          }
         />
 
         <directionalLight
@@ -763,7 +777,9 @@ export function SimulationCanvas({
             8,
             5,
           ]}
-          intensity={2}
+          intensity={
+            2
+          }
         />
 
         {showFloor && (
@@ -782,21 +798,37 @@ export function SimulationCanvas({
             carRotation
           }
         >
-          <CarModel
-            onNodesReady={
-              handleNodesReady
+          {/* =================================================
+              CAR MODEL
+
+              The model stays mounted so node registry
+              and all GLB references remain available.
+          ================================================= */}
+
+          <group
+            visible={
+              showCarModel
             }
-            engineFocus={
-              cameraFocus ===
-              "engine"
-            }
-            focusComponent={
-              cameraFocus
-            }
-            onNodeSelect={
-              onNodeSelect
-            }
-          />
+          >
+            <CarModel
+              onNodesReady={
+                handleNodesReady
+              }
+              engineFocus={
+                shouldTransparentCar
+              }
+              focusComponent={
+                cameraFocus
+              }
+              onNodeSelect={
+                onNodeSelect
+              }
+            />
+          </group>
+
+          {/* =================================================
+              WHEEL SYSTEM
+          ================================================= */}
 
           {carNodes && (
             <WheelSystem
@@ -815,6 +847,10 @@ export function SimulationCanvas({
             />
           )}
         </group>
+
+        {/* ===================================================
+            HYBRID SYSTEM
+        =================================================== */}
 
         {carNodes &&
           hybrid && (
@@ -843,6 +879,10 @@ export function SimulationCanvas({
             />
           )}
 
+        {/* ===================================================
+            ENGINE OVERLAY
+        =================================================== */}
+
         {focusObject &&
           cameraFocus &&
           engineOverlay && (
@@ -851,19 +891,38 @@ export function SimulationCanvas({
                 focusObject
               }
             >
-              {engineOverlay}
+              {
+                engineOverlay
+              }
             </WorldAnchor>
           )}
 
         {children}
 
+        {/* ===================================================
+            ORBIT CONTROLS
+        =================================================== */}
+
         <OrbitControls
-          ref={controlsRef}
+          ref={
+            controlsRef
+          }
           target={
             cameraTarget
           }
           enableDamping
-          dampingFactor={0.08}
+          dampingFactor={
+            0.045
+          }
+          rotateSpeed={
+            0.82
+          }
+          zoomSpeed={
+            0.95
+          }
+          enablePan={
+            false
+          }
           minDistance={
             minDistance
           }
@@ -871,12 +930,18 @@ export function SimulationCanvas({
             maxDistance
           }
           minPolarAngle={
-            Math.PI * 0.35
+            Math.PI *
+            0.28
           }
           maxPolarAngle={
-            Math.PI * 0.6
+            Math.PI *
+            0.63
           }
         />
+
+        {/* ===================================================
+            CAMERA FOCUS
+        =================================================== */}
 
         <CameraFocusController
           active={
@@ -915,22 +980,20 @@ function getFocusObject(
     | CameraFocus
     | null,
 ) {
-  if (!nodes || !focus) {
+  if (
+    !nodes ||
+    !focus
+  ) {
     return undefined;
   }
 
   /**
-   * IMPORTANT:
-   *
-   * Internal engine parts all use the
+   * Internal engine components use the
    * complete engine mechanism as camera
-   * target.
+   * focus object.
    *
-   * The selected piston / rod / crankshaft
-   * is highlighted separately by CarModel.
-   *
-   * This gives a stable "front engine view"
-   * instead of zooming into tiny meshes.
+   * The selected component highlight is
+   * handled independently by CarModel.
    */
   if (
     focus ===
@@ -952,29 +1015,37 @@ function getFocusObject(
     focus ===
       "rod4"
   ) {
-    return nodes.engine
+    return nodes
+      .engine
       .mechanism;
   }
 
-  switch (focus) {
+  switch (
+    focus
+  ) {
     case "engine":
-      return nodes.engine
+      return nodes
+        .engine
         .mechanism;
 
     case "generator":
-      return nodes.hybrid
+      return nodes
+        .hybrid
         .generator;
 
     case "inverter":
-      return nodes.hybrid
+      return nodes
+        .hybrid
         .inverter;
 
     case "electricMotor":
-      return nodes.hybrid
+      return nodes
+        .hybrid
         .electricMotor;
 
     case "battery":
-      return nodes.hybrid
+      return nodes
+        .hybrid
         .battery;
 
     default:

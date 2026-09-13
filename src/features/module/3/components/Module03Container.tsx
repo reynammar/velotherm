@@ -16,28 +16,44 @@ import {
   Scene09InternalEngineARView,
 } from "../scenes/Scene09InternalEngineARView";
 
+import {
+  Scene10VehicleEngineeringLab,
+} from "../scenes/Scene10VehicleEngineeringLab";
+
 const SCENES = [
   {
-    id: "engine-energy-conversion",
-    label: "08 · Engine Energy Conversion",
+    id:
+      "engine-energy-conversion",
+    label:
+      "08 · Engine Energy Conversion",
   },
   {
-    id: "internal-engine-ar",
-    label: "09 · Internal Engine AR View",
+    id:
+      "internal-engine-ar",
+    label:
+      "09 · Cycles & Efficiency",
+  },
+  {
+    id:
+      "vehicle-engineering-lab",
+    label:
+      "10 · Vehicle Engineering Lab",
   },
 ];
 
 type SceneId =
   | "engine-energy-conversion"
-  | "internal-engine-ar";
+  | "internal-engine-ar"
+  | "vehicle-engineering-lab";
 
 export function Module03Container() {
   const [
     activeScene,
     setActiveScene,
-  ] = useState<SceneId>(
-    "engine-energy-conversion",
-  );
+  ] =
+    useState<SceneId>(
+      "engine-energy-conversion",
+    );
 
   return (
     <div className="relative">
@@ -51,12 +67,21 @@ export function Module03Container() {
         <Scene09InternalEngineARView />
       )}
 
+      {activeScene ===
+        "vehicle-engineering-lab" && (
+        <Scene10VehicleEngineeringLab />
+      )}
+
       <SimulationSceneNavigator
-        scenes={SCENES}
+        scenes={
+          SCENES
+        }
         activeScene={
           activeScene
         }
-        onChange={(sceneId) =>
+        onChange={(
+          sceneId,
+        ) =>
           setActiveScene(
             sceneId as SceneId,
           )
