@@ -6,12 +6,17 @@ import {
 } from "react";
 
 import {
+  BookOpen,
   Home,
 } from "lucide-react";
 
 import {
   useRouter,
 } from "next/navigation";
+
+import {
+  FoundationLayer,
+} from "./FoundationLayer";
 
 type SimulationShellProps = {
   moduleLabel: string;
@@ -33,37 +38,71 @@ export function SimulationShell({
   const router =
     useRouter();
 
-  /*
-   * =========================================================
-   * TABLET / MOBILE DRAWER STATE
-   * =========================================================
-   */
+  /* =======================================================
+     CONTROL DRAWER
+  ======================================================= */
+
   const [
     controlsOpen,
     setControlsOpen,
   ] = useState(false);
 
-  /*
-   * =========================================================
-   * DESKTOP HUD STATE
-   * =========================================================
-   *
-   * Desktop starts open.
-   */
+  /* =======================================================
+     DESKTOP CONTROL HUD
+  ======================================================= */
+
   const [
     desktopControlsOpen,
     setDesktopControlsOpen,
   ] = useState(true);
 
-  const handleBackHome = () => {
-    setControlsOpen(false);
+  /* =======================================================
+     FOUNDATION
+  ======================================================= */
 
-    setDesktopControlsOpen(
-      true,
-    );
+  const [
+    foundationOpen,
+    setFoundationOpen,
+  ] = useState(false);
 
-    router.push("/");
-  };
+  const handleBackHome =
+    () => {
+      setControlsOpen(
+        false,
+      );
+
+      setDesktopControlsOpen(
+        true,
+      );
+
+      setFoundationOpen(
+        false,
+      );
+
+      router.push("/");
+    };
+
+  const handleOpenFoundation =
+    () => {
+      setFoundationOpen(
+        true,
+      );
+
+      /*
+       * Close simulation controls on smaller
+       * devices when the Foundation layer opens.
+       */
+      setControlsOpen(
+        false,
+      );
+    };
+
+  const handleCloseFoundation =
+    () => {
+      setFoundationOpen(
+        false,
+      );
+    };
 
   return (
     <main className="relative h-[100dvh] min-h-[560px] w-full overflow-hidden bg-[var(--color-brand-charcoal)] text-white">
@@ -92,7 +131,9 @@ export function SimulationShell({
           ================================================= */}
 
           <div className="flex min-w-0 items-start gap-2">
-            {/* HOME */}
+            {/* =================================================
+                HOME
+            ================================================= */}
 
             <button
               type="button"
@@ -112,7 +153,9 @@ export function SimulationShell({
               />
             </button>
 
-            {/* BRAND */}
+            {/* =================================================
+                BRAND
+            ================================================= */}
 
             <div
               className="pointer-events-auto min-w-0 max-w-[72vw] border border-slate-700/80 bg-slate-950/72 px-3 py-2 backdrop-blur-md sm:max-w-[42vw] sm:px-4 sm:py-3 lg:max-w-[420px]"
@@ -129,17 +172,23 @@ export function SimulationShell({
                 <span className="h-3.5 w-px shrink-0 bg-slate-600 sm:h-4" />
 
                 <span className="truncate font-[var(--font-chakra-petch)] text-[8px] font-semibold uppercase tracking-[0.15em] text-slate-400 sm:text-[10px] lg:text-xs">
-                  {moduleLabel}
+                  {
+                    moduleLabel
+                  }
                 </span>
               </div>
 
               <div className="mt-1 flex min-w-0 items-center gap-2">
                 <span className="shrink-0 font-[var(--font-jetbrains-mono)] text-[8px] text-[var(--color-brand-red)] sm:text-[9px]">
-                  {sceneNumber}
+                  {
+                    sceneNumber
+                  }
                 </span>
 
                 <span className="truncate font-[var(--font-chakra-petch)] text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-300 sm:text-[9px] lg:text-[10px]">
-                  {sceneLabel}
+                  {
+                    sceneLabel
+                  }
                 </span>
               </div>
             </div>
@@ -149,24 +198,85 @@ export function SimulationShell({
               TOP RIGHT STATUS
           ================================================= */}
 
-          {topRight && (
-            <div className="pointer-events-auto hidden max-w-[30vw] shrink-0 sm:block lg:max-w-none">
-              {topRight}
-            </div>
-          )}
+          <div className="relative flex shrink-0 flex-col items-end">
+            {topRight && (
+              <div className="pointer-events-auto hidden max-w-[30vw] sm:block lg:max-w-none">
+                {
+                  topRight
+                }
+              </div>
+            )}
+
+            {/* =================================================
+                FOUNDATION BUTTON
+
+                Positioned BELOW the top-right status so it
+                does not compete with the scene navigator.
+            ================================================= */}
+
+            <button
+              type="button"
+              aria-label="Open thermodynamics foundation"
+              aria-expanded={
+                foundationOpen
+              }
+              onClick={
+                handleOpenFoundation
+              }
+              className="pointer-events-auto mt-2 flex h-9 w-9 items-center justify-center border border-slate-700/90 bg-slate-950/90 text-cyan-400 shadow-lg backdrop-blur-md transition-all duration-200 hover:border-cyan-500/60 hover:bg-slate-900 hover:text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 sm:h-10 sm:w-auto sm:gap-2 sm:px-3"
+              style={{
+                clipPath:
+                  "var(--clip-chamfer-sm)",
+              }}
+            >
+              <BookOpen
+                size={13}
+                strokeWidth={1.6}
+              />
+
+              <span className="hidden font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.14em] text-slate-300 sm:inline">
+                Foundation
+              </span>
+            </button>
+          </div>
         </div>
       </header>
+
+      {/* =====================================================
+          FOUNDATION LAYER
+      ===================================================== */}
+
+      <FoundationLayer
+        key={
+          sceneNumber
+        }
+        moduleLabel={
+          moduleLabel
+        }
+        sceneNumber={
+          sceneNumber
+        }
+        sceneLabel={
+          sceneLabel
+        }
+        open={
+          foundationOpen
+        }
+        onClose={
+          handleCloseFoundation
+        }
+      />
 
       {/* =====================================================
           CONTROL UI
 
           Layer order:
 
-          z-70 → drawer
+          z-70 → mobile/tablet drawer
           z-65 → drawer backdrop
-          z-55 → desktop show/hide handle
-          z-50 → header / navigator / control trigger
-          z-10 → screen overlay
+          z-60 → desktop foundation
+          z-50 → header / controls
+          z-10 → global overlay
           z-0  → 3D canvas
       ===================================================== */}
 
@@ -175,27 +285,12 @@ export function SimulationShell({
           {/* =================================================
               DESKTOP CONTROL HUD
               ≥ 1280px
-
-              IMPORTANT:
-              The panel configuration remains the same.
-              The hide button is now INSIDE the scaled
-              panel wrapper so it follows the actual
-              panel height automatically.
           ================================================= */}
 
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-50 hidden min-[1280px]:block">
             <div className="mx-auto flex w-full max-w-[1160px] items-end justify-center px-2">
               {desktopControlsOpen ? (
                 <div className="pointer-events-auto relative w-full">
-                  {/* =========================================
-                      PANEL + ATTACHED HIDE HANDLE
-
-                      Both live inside the same wrapper.
-                      Therefore the handle always follows
-                      the real top edge of bottomContent,
-                      regardless of panel height.
-                  ========================================= */}
-
                   <div
                     className="relative w-full origin-bottom"
                     style={{
@@ -205,12 +300,9 @@ export function SimulationShell({
                         "bottom center",
                     }}
                   >
-                    {/* =======================================
+                    {/* =================================================
                         HIDE HANDLE
-
-                        Directly attached to the top edge
-                        of the panel.
-                    ======================================= */}
+                    ================================================= */}
 
                     <button
                       type="button"
@@ -246,24 +338,24 @@ export function SimulationShell({
                       </svg>
                     </button>
 
-                    {/* =======================================
-                        EXISTING BOTTOM CONTENT
-
-                        No sizing/layout change.
-                    ======================================= */}
+                    {/* =================================================
+                        CONTROL PANEL
+                    ================================================= */}
 
                     <div
                       id="desktop-simulation-controls"
                       className="w-full"
                     >
-                      {bottomContent}
+                      {
+                        bottomContent
+                      }
                     </div>
                   </div>
                 </div>
               ) : (
-                /* =============================================
-                   DESKTOP SHOW HANDLE
-                ============================================= */
+                /* =================================================
+                   SHOW HANDLE
+                ================================================= */
 
                 <button
                   id="desktop-simulation-controls-show"
@@ -287,7 +379,7 @@ export function SimulationShell({
                   <svg
                     aria-hidden="true"
                     viewBox="0 0 12 12"
-                    className="h-2.5 w-2.5 text-slate-500 transition-transform duration-200"
+                    className="h-2.5 w-2.5 text-slate-500"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="1.5"
@@ -295,7 +387,7 @@ export function SimulationShell({
                     <path d="m2.5 4.5 3.5 3.5 3.5-3.5" />
                   </svg>
 
-                  <span className="font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.14em] text-slate-400 transition-colors hover:text-white">
+                  <span className="font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                     Show Controls
                   </span>
                 </button>
@@ -305,15 +397,15 @@ export function SimulationShell({
 
           {/* =================================================
               TABLET / MOBILE CONTROL TRIGGER
-
-              ORIGINAL CONFIGURATION PRESERVED
           ================================================= */}
 
           {!controlsOpen && (
             <div className="absolute bottom-[76px] right-3 z-50 min-[1280px]:hidden sm:right-5">
               <button
                 type="button"
-                aria-expanded={false}
+                aria-expanded={
+                  false
+                }
                 aria-controls="simulation-controls-drawer"
                 onClick={() =>
                   setControlsOpen(
@@ -341,8 +433,6 @@ export function SimulationShell({
 
           {/* =================================================
               DRAWER BACKDROP
-
-              ORIGINAL CONFIGURATION PRESERVED
           ================================================= */}
 
           {controlsOpen && (
@@ -360,8 +450,6 @@ export function SimulationShell({
 
           {/* =================================================
               TABLET / MOBILE DRAWER
-
-              ORIGINAL CONFIGURATION PRESERVED
           ================================================= */}
 
           <aside
@@ -375,7 +463,9 @@ export function SimulationShell({
               controlsOpen
                 ? "translate-y-0"
                 : "pointer-events-none translate-y-full",
-            ].join(" ")}
+            ].join(
+              " ",
+            )}
           >
             <div className="mx-auto w-full max-w-3xl px-2 pb-2 sm:px-4 sm:pb-4">
               <div
@@ -385,7 +475,9 @@ export function SimulationShell({
                     "var(--clip-chamfer-sm)",
                 }}
               >
-                {/* DRAWER HEADER */}
+                {/* =================================================
+                    DRAWER HEADER
+                ================================================= */}
 
                 <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-3 py-2.5 sm:px-4 sm:py-3">
                   <div className="min-w-0">
@@ -394,8 +486,13 @@ export function SimulationShell({
                     </span>
 
                     <span className="mt-0.5 block truncate font-[var(--font-jetbrains-mono)] text-[7px] uppercase tracking-wide text-slate-500 sm:text-[8px]">
-                      {sceneNumber} ·{" "}
-                      {sceneLabel}
+                      {
+                        sceneNumber
+                      }{" "}
+                      ·{" "}
+                      {
+                        sceneLabel
+                      }
                     </span>
                   </div>
 
@@ -415,7 +512,9 @@ export function SimulationShell({
                   </button>
                 </div>
 
-                {/* DRAWER CONTENT */}
+                {/* =================================================
+                    DRAWER CONTENT
+                ================================================= */}
 
                 <div className="max-h-[42dvh] overflow-y-auto overscroll-contain px-2 py-2 sm:max-h-[46dvh] sm:px-3 sm:py-3">
                   <div
@@ -427,7 +526,9 @@ export function SimulationShell({
                         "bottom center",
                     }}
                   >
-                    {bottomContent}
+                    {
+                      bottomContent
+                    }
                   </div>
                 </div>
               </div>
