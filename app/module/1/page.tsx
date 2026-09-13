@@ -1,4 +1,4 @@
-import { Module01Container } from "@/src/features/module/1/container/Module01Container";
+import { Module01Container } from "@/src/features/module/1/components/Module01Container";
 
 export default function ModuleOnePage() {
   return (

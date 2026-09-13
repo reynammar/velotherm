@@ -1,16 +1,30 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
 } from "react";
 
-import { useGLTF } from "@react-three/drei";
+import {
+  Billboard,
+  useGLTF,
+} from "@react-three/drei";
 
 import {
+  useFrame,
+} from "@react-three/fiber";
+
+import type {
+  ThreeEvent,
+} from "@react-three/fiber";
+
+import {
+  Box3,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
+  Vector3,
   type Material,
   type Mesh,
   type Object3D,
@@ -24,19 +38,138 @@ import {
 const MODEL_PATH =
   "/models/velotherm-master.glb";
 
-type CarModelProps = {
-  onNodesReady?: (
-    nodes: CarNodeRegistry,
-  ) => void;
+export type CarFocusComponent =
+  | "engine"
+  | "crankshaft"
+  | "piston1"
+  | "rod1"
+  | "piston2"
+  | "rod2"
+  | "piston3"
+  | "rod3"
+  | "piston4"
+  | "rod4"
+  | "generator"
+  | "inverter"
+  | "electricMotor"
+  | "battery";
 
-  engineFocus?: boolean;
+type EngineInternalComponent =
+  | "crankshaft"
+  | "piston1"
+  | "rod1"
+  | "piston2"
+  | "rod2"
+  | "piston3"
+  | "rod3"
+  | "piston4"
+  | "rod4";
+
+type OriginalMaterialMap =
+  Map<
+    Mesh,
+    Material | Material[]
+  >;
+
+type FocusMaterialMap =
+  Map<
+    Mesh,
+    Material | Material[]
+  >;
+
+type OriginalRaycastMap =
+  Map<
+    Mesh,
+    Mesh["raycast"]
+  >;
+
+type VisualRole =
+  | "selected"
+  | "related"
+  | "focus";
+
+type EngineInteractionMarkerProps = {
+  target: Object3D;
+  component: EngineInternalComponent;
+  selected: boolean;
+  onSelect: (
+    component: CarFocusComponent,
+  ) => void;
 };
 
-type OriginalMaterialsMap =
-  Map<Mesh, Material | Material[]>;
+const ENGINE_MARKERS: Array<{
+  component: EngineInternalComponent;
+  label: string;
+}> = [
+  {
+    component: "piston1",
+    label: "Piston 01",
+  },
+  {
+    component: "rod1",
+    label: "Rod 01",
+  },
+  {
+    component: "piston2",
+    label: "Piston 02",
+  },
+  {
+    component: "rod2",
+    label: "Rod 02",
+  },
+  {
+    component: "piston3",
+    label: "Piston 03",
+  },
+  {
+    component: "rod3",
+    label: "Rod 03",
+  },
+  {
+    component: "piston4",
+    label: "Piston 04",
+  },
+  {
+    component: "rod4",
+    label: "Rod 04",
+  },
+  {
+    component: "crankshaft",
+    label: "Crankshaft",
+  },
+];
 
-type FocusMaterialsMap =
-  Map<Mesh, Material | Material[]>;
+const ENGINE_NODE_NAMES: Record<
+  EngineInternalComponent,
+  string
+> = {
+  piston1:
+    "AR_ENGINE_PISTON_1_SLIDER",
+
+  rod1:
+    "AR_ENGINE_ROD_1_PIVOT",
+
+  piston2:
+    "AR_ENGINE_PISTON_2_SLIDER",
+
+  rod2:
+    "AR_ENGINE_ROD_2_PIVOT",
+
+  piston3:
+    "AR_ENGINE_PISTON_3_SLIDER",
+
+  rod3:
+    "AR_ENGINE_ROD_3_PIVOT",
+
+  piston4:
+    "AR_ENGINE_PISTON_4_SLIDER",
+
+  rod4:
+    "AR_ENGINE_ROD_4_PIVOT",
+
+  crankshaft:
+    "AR_ENGINE_CRANKSHAFT_PIVOT",
+};
 
 function cloneMaterial(
   material: Material,
@@ -45,9 +178,13 @@ function cloneMaterial(
 }
 
 function cloneMeshMaterials(
-  material: Material | Material[],
+  material:
+    | Material
+    | Material[],
 ): Material | Material[] {
-  if (Array.isArray(material)) {
+  if (
+    Array.isArray(material)
+  ) {
     return material.map(
       cloneMaterial,
     );
@@ -59,15 +196,18 @@ function cloneMeshMaterials(
 }
 
 function getMaterials(
-  material: Material | Material[],
+  material:
+    | Material
+    | Material[],
 ): Material[] {
   return Array.isArray(material)
     ? material
     : [material];
 }
 
-function setEngineMaterial(
+function setFocusMaterial(
   material: Material,
+  role: VisualRole,
 ) {
   if (
     material instanceof
@@ -79,12 +219,40 @@ function setEngineMaterial(
     material.opacity = 1;
     material.depthWrite = true;
 
+    if (
+      role ===
+      "selected"
+    ) {
+      material.emissive.set(
+        "#22d3ee",
+      );
+
+      material.emissiveIntensity =
+        0.55;
+
+      return;
+    }
+
+    if (
+      role ===
+      "related"
+    ) {
+      material.emissive.set(
+        "#06b6d4",
+      );
+
+      material.emissiveIntensity =
+        0.18;
+
+      return;
+    }
+
     material.emissive.set(
       "#dc2626",
     );
 
     material.emissiveIntensity =
-      0.22;
+      0.08;
   }
 }
 
@@ -92,102 +260,593 @@ function setBodyMaterial(
   material: Material,
 ) {
   material.transparent = true;
-  material.opacity = 0.16;
+  material.opacity = 0.08;
   material.depthWrite = false;
 }
 
-function applyEngineFocus(
-  scene: Object3D,
-  engineRoot: Object3D,
-  originalMaterials: OriginalMaterialsMap,
-  focusMaterials: FocusMaterialsMap,
+function collectHierarchy(
+  root: Object3D,
 ) {
-  const engineObjects =
+  const objects =
     new Set<Object3D>();
 
-  engineRoot.traverse((object) => {
-    engineObjects.add(object);
-  });
+  root.traverse(
+    (object) => {
+      objects.add(object);
+    },
+  );
 
-  scene.traverse((object) => {
-    const mesh =
-      object as Mesh;
+  return objects;
+}
 
-    if (!mesh.isMesh) {
-      return;
+function isEngineInternalComponent(
+  component:
+    | CarFocusComponent
+    | null
+    | undefined,
+): component is EngineInternalComponent {
+  return (
+    component ===
+      "crankshaft" ||
+    component ===
+      "piston1" ||
+    component ===
+      "rod1" ||
+    component ===
+      "piston2" ||
+    component ===
+      "rod2" ||
+    component ===
+      "piston3" ||
+    component ===
+      "rod3" ||
+    component ===
+      "piston4" ||
+    component ===
+      "rod4"
+  );
+}
+
+function getSelectedNode(
+  nodes: CarNodeRegistry,
+  component:
+    | CarFocusComponent
+    | null,
+): Object3D | null {
+  if (!component) {
+    return null;
+  }
+
+  switch (component) {
+    case "crankshaft":
+      return nodes.engine
+        .crankshaft;
+
+    case "piston1":
+      return nodes.engine
+        .piston1;
+
+    case "rod1":
+      return nodes.engine
+        .rod1;
+
+    case "piston2":
+      return nodes.engine
+        .piston2;
+
+    case "rod2":
+      return nodes.engine
+        .rod2;
+
+    case "piston3":
+      return nodes.engine
+        .piston3;
+
+    case "rod3":
+      return nodes.engine
+        .rod3;
+
+    case "piston4":
+      return nodes.engine
+        .piston4;
+
+    case "rod4":
+      return nodes.engine
+        .rod4;
+
+    case "generator":
+      return nodes.hybrid
+        .generator;
+
+    case "inverter":
+      return nodes.hybrid
+        .inverter;
+
+    case "electricMotor":
+      return nodes.hybrid
+        .electricMotor;
+
+    case "battery":
+      return nodes.hybrid
+        .battery;
+
+    case "engine":
+      return nodes.engine
+        .mechanism;
+
+    default:
+      return null;
+  }
+}
+
+function getRelatedEngineNodes(
+  nodes: CarNodeRegistry,
+  component:
+    | CarFocusComponent
+    | null,
+) {
+  const related =
+    new Set<Object3D>();
+
+  if (
+    component ===
+    "crankshaft"
+  ) {
+    related.add(
+      nodes.engine
+        .crankshaft,
+    );
+
+    related.add(
+      nodes.engine.piston1,
+    );
+
+    related.add(
+      nodes.engine.rod1,
+    );
+
+    related.add(
+      nodes.engine.piston2,
+    );
+
+    related.add(
+      nodes.engine.rod2,
+    );
+
+    related.add(
+      nodes.engine.piston3,
+    );
+
+    related.add(
+      nodes.engine.rod3,
+    );
+
+    related.add(
+      nodes.engine.piston4,
+    );
+
+    related.add(
+      nodes.engine.rod4,
+    );
+
+    return related;
+  }
+
+  if (
+    component ===
+      "piston1" ||
+    component ===
+      "rod1"
+  ) {
+    related.add(
+      nodes.engine
+        .piston1,
+    );
+
+    related.add(
+      nodes.engine
+        .rod1,
+    );
+
+    related.add(
+      nodes.engine
+        .crankshaft,
+    );
+
+    return related;
+  }
+
+  if (
+    component ===
+      "piston2" ||
+    component ===
+      "rod2"
+  ) {
+    related.add(
+      nodes.engine
+        .piston2,
+    );
+
+    related.add(
+      nodes.engine
+        .rod2,
+    );
+
+    related.add(
+      nodes.engine
+        .crankshaft,
+    );
+
+    return related;
+  }
+
+  if (
+    component ===
+      "piston3" ||
+    component ===
+      "rod3"
+  ) {
+    related.add(
+      nodes.engine
+        .piston3,
+    );
+
+    related.add(
+      nodes.engine
+        .rod3,
+    );
+
+    related.add(
+      nodes.engine
+        .crankshaft,
+    );
+
+    return related;
+  }
+
+  if (
+    component ===
+      "piston4" ||
+    component ===
+      "rod4"
+  ) {
+    related.add(
+      nodes.engine
+        .piston4,
+    );
+
+    related.add(
+      nodes.engine
+        .rod4,
+    );
+
+    related.add(
+      nodes.engine
+        .crankshaft,
+    );
+
+    return related;
+  }
+
+  return related;
+}
+
+function resolveFocusRoot(
+  nodes: CarNodeRegistry,
+  component:
+    | CarFocusComponent
+    | null,
+) {
+  if (!component) {
+    return null;
+  }
+
+  if (
+    isEngineInternalComponent(
+      component,
+    )
+  ) {
+    return nodes.engine
+      .mechanism;
+  }
+
+  switch (component) {
+    case "engine":
+      return nodes.engine
+        .mechanism;
+
+    case "generator":
+      return nodes.hybrid
+        .generator;
+
+    case "inverter":
+      return nodes.hybrid
+        .inverter;
+
+    case "electricMotor":
+      return nodes.hybrid
+        .electricMotor;
+
+    case "battery":
+      return nodes.hybrid
+        .battery;
+
+    default:
+      return null;
+  }
+}
+
+function resolveClickedComponent(
+  object: Object3D,
+  nodes: CarNodeRegistry,
+): CarFocusComponent | null {
+  let current:
+    | Object3D
+    | null = object;
+
+  while (current) {
+    if (
+      current ===
+      nodes.engine
+        .crankshaft
+    ) {
+      return "crankshaft";
     }
 
     if (
-      !originalMaterials.has(mesh)
+      current ===
+      nodes.engine.piston1
     ) {
-      originalMaterials.set(
-        mesh,
-        mesh.material,
-      );
+      return "piston1";
     }
 
-    const focused =
-      engineObjects.has(mesh);
+    if (
+      current ===
+      nodes.engine.rod1
+    ) {
+      return "rod1";
+    }
 
-    const focusMaterial =
-      cloneMeshMaterials(
-        mesh.material,
+    if (
+      current ===
+      nodes.engine.piston2
+    ) {
+      return "piston2";
+    }
+
+    if (
+      current ===
+      nodes.engine.rod2
+    ) {
+      return "rod2";
+    }
+
+    if (
+      current ===
+      nodes.engine.piston3
+    ) {
+      return "piston3";
+    }
+
+    if (
+      current ===
+      nodes.engine.rod3
+    ) {
+      return "rod3";
+    }
+
+    if (
+      current ===
+      nodes.engine.piston4
+    ) {
+      return "piston4";
+    }
+
+    if (
+      current ===
+      nodes.engine.rod4
+    ) {
+      return "rod4";
+    }
+
+    if (
+      current ===
+      nodes.engine.mechanism
+    ) {
+      return "engine";
+    }
+
+    if (
+      current ===
+      nodes.hybrid.generator
+    ) {
+      return "generator";
+    }
+
+    if (
+      current ===
+      nodes.hybrid.inverter
+    ) {
+      return "inverter";
+    }
+
+    if (
+      current ===
+      nodes.hybrid.electricMotor
+    ) {
+      return "electricMotor";
+    }
+
+    if (
+      current ===
+      nodes.hybrid.battery
+    ) {
+      return "battery";
+    }
+
+    current =
+      current.parent;
+  }
+
+  return null;
+}
+
+function applyFocus(
+  scene: Object3D,
+  focusRoot: Object3D,
+  focusComponent:
+    | CarFocusComponent
+    | null,
+  nodes: CarNodeRegistry,
+  originalMaterials: OriginalMaterialMap,
+  focusMaterials: FocusMaterialMap,
+) {
+  const focusObjects =
+    collectHierarchy(
+      focusRoot,
+    );
+
+  const selectedRoot =
+    getSelectedNode(
+      nodes,
+      focusComponent,
+    );
+
+  const selectedObjects =
+    selectedRoot
+      ? collectHierarchy(
+          selectedRoot,
+        )
+      : new Set<Object3D>();
+
+  const relatedRoots =
+    getRelatedEngineNodes(
+      nodes,
+      focusComponent,
+    );
+
+  const relatedObjects =
+    new Set<Object3D>();
+
+  relatedRoots.forEach(
+    (root) => {
+      collectHierarchy(
+        root,
+      ).forEach(
+        (object) => {
+          relatedObjects.add(
+            object,
+          );
+        },
       );
+    },
+  );
 
-    const materials =
+  scene.traverse(
+    (object) => {
+      const mesh =
+        object as Mesh;
+
+      if (!mesh.isMesh) {
+        return;
+      }
+
+      if (
+        !originalMaterials.has(
+          mesh,
+        )
+      ) {
+        originalMaterials.set(
+          mesh,
+          mesh.material,
+        );
+      }
+
+      let role:
+        | VisualRole
+        | null = null;
+
+      if (
+        selectedObjects.has(
+          mesh,
+        )
+      ) {
+        role = "selected";
+      } else if (
+        relatedObjects.has(
+          mesh,
+        )
+      ) {
+        role = "related";
+      } else if (
+        focusObjects.has(
+          mesh,
+        )
+      ) {
+        role = "focus";
+      }
+
+      const focusMaterial =
+        cloneMeshMaterials(
+          mesh.material,
+        );
+
       getMaterials(
         focusMaterial,
+      ).forEach(
+        (material) => {
+          if (role) {
+            setFocusMaterial(
+              material,
+              role,
+            );
+          } else {
+            setBodyMaterial(
+              material,
+            );
+          }
+        },
       );
 
-    materials.forEach(
-      (material) => {
-        if (focused) {
-          setEngineMaterial(
-            material,
-          );
-        } else {
-          setBodyMaterial(
-            material,
-          );
-        }
-      },
-    );
+      mesh.material =
+        focusMaterial;
 
-    mesh.material =
-      focusMaterial;
-
-    focusMaterials.set(
-      mesh,
-      focusMaterial,
-    );
-  });
+      focusMaterials.set(
+        mesh,
+        focusMaterial,
+      );
+    },
+  );
 }
 
 function restoreOriginalMaterials(
-  originalMaterials: OriginalMaterialsMap,
+  originalMaterials: OriginalMaterialMap,
 ) {
   originalMaterials.forEach(
-    (material, mesh) => {
-      mesh.material = material;
+    (
+      material,
+      mesh,
+    ) => {
+      mesh.material =
+        material;
     },
   );
 }
 
 function disposeFocusMaterials(
-  focusMaterials: FocusMaterialsMap,
+  focusMaterials: FocusMaterialMap,
 ) {
   const disposedMaterials =
     new Set<Material>();
 
   focusMaterials.forEach(
     (material) => {
-      const materials =
-        getMaterials(
-          material,
-        );
-
-      materials.forEach(
-        (currentMaterial) => {
+      getMaterials(
+        material,
+      ).forEach(
+        (
+          currentMaterial,
+        ) => {
           if (
             disposedMaterials.has(
               currentMaterial,
@@ -209,9 +868,411 @@ function disposeFocusMaterials(
   focusMaterials.clear();
 }
 
+function updateEngineRaycastState(
+  scene: Object3D,
+  engineRoot: Object3D,
+  enabled: boolean,
+  originalRaycasts: OriginalRaycastMap,
+) {
+  const engineObjects =
+    collectHierarchy(
+      engineRoot,
+    );
+
+  scene.traverse(
+    (object) => {
+      const mesh =
+        object as Mesh;
+
+      if (!mesh.isMesh) {
+        return;
+      }
+
+      if (
+        !originalRaycasts.has(
+          mesh,
+        )
+      ) {
+        originalRaycasts.set(
+          mesh,
+          mesh.raycast,
+        );
+      }
+
+      if (enabled) {
+        if (
+          engineObjects.has(
+            mesh,
+          )
+        ) {
+          const original =
+            originalRaycasts.get(
+              mesh,
+            );
+
+          if (original) {
+            mesh.raycast =
+              original;
+          }
+
+          return;
+        }
+
+        mesh.raycast =
+          () => {};
+
+        return;
+      }
+
+      const original =
+        originalRaycasts.get(
+          mesh,
+        );
+
+      if (original) {
+        mesh.raycast =
+          original;
+      }
+    },
+  );
+}
+
+function getMarkerRadius(
+  target: Object3D,
+) {
+  const bounds =
+    new Box3().setFromObject(
+      target,
+    );
+
+  if (
+    bounds.isEmpty()
+  ) {
+    return 0.075;
+  }
+
+  const size =
+    bounds.getSize(
+      new Vector3(),
+    );
+
+  const calculated =
+    size.length() * 0.2;
+
+  return Math.min(
+    Math.max(
+      calculated,
+      0.06,
+    ),
+    0.12,
+  );
+}
+
+function EngineInteractionMarker({
+  target,
+  component,
+  selected,
+  onSelect,
+}: EngineInteractionMarkerProps) {
+  const markerRef =
+    useRef<Object3D | null>(
+      null,
+    );
+
+  const worldPositionRef =
+    useRef(
+      new Vector3(),
+    );
+
+  const localPositionRef =
+    useRef(
+      new Vector3(),
+    );
+
+  const radius =
+    useMemo(
+      () =>
+        getMarkerRadius(
+          target,
+        ),
+      [target],
+    );
+
+  const hitRadius =
+    Math.max(
+      radius * 2.4,
+      0.16,
+    );
+
+  useFrame(
+    (state) => {
+      const marker =
+        markerRef.current;
+
+      if (!marker) {
+        return;
+      }
+
+      const parent =
+        marker.parent;
+
+      if (!parent) {
+        return;
+      }
+
+      target.getWorldPosition(
+        worldPositionRef.current,
+      );
+
+      localPositionRef.current.copy(
+        worldPositionRef.current,
+      );
+
+      parent.worldToLocal(
+        localPositionRef.current,
+      );
+
+      marker.position.copy(
+        localPositionRef.current,
+      );
+
+      const pulse =
+        selected
+          ? 1 +
+            Math.sin(
+              state.clock.getElapsedTime() *
+                5,
+            ) *
+              0.08
+          : 1;
+
+      marker.scale.setScalar(
+        pulse,
+      );
+    },
+  );
+
+  const handleClick = (
+    event: ThreeEvent<MouseEvent>,
+  ) => {
+    event.stopPropagation();
+
+    onSelect(
+      component,
+    );
+  };
+
+  return (
+    <group
+      ref={markerRef}
+      renderOrder={1000}
+    >
+      <Billboard
+        follow
+        lockX={false}
+        lockY={false}
+        lockZ={false}
+      >
+        <group>
+          {/* =================================================
+              LARGE INVISIBLE HIT AREA
+
+              This makes small piston / rod markers
+              much easier to click.
+          ================================================= */}
+
+          <mesh
+            onClick={
+              handleClick
+            }
+            onPointerDown={(
+              event,
+            ) => {
+              event.stopPropagation();
+            }}
+            renderOrder={1000}
+          >
+            <circleGeometry
+              args={[
+                hitRadius,
+                32,
+              ]}
+            />
+
+            <meshBasicMaterial
+              transparent
+              opacity={0}
+              depthTest={false}
+              depthWrite={false}
+            />
+          </mesh>
+
+          {/* =================================================
+              VISIBLE MARKER
+          ================================================= */}
+
+          <mesh
+            onClick={
+              handleClick
+            }
+            onPointerDown={(
+              event,
+            ) => {
+              event.stopPropagation();
+            }}
+            renderOrder={1001}
+          >
+            <ringGeometry
+              args={[
+                radius * 0.62,
+                radius,
+                32,
+              ]}
+            />
+
+            <meshBasicMaterial
+              color={
+                selected
+                  ? "#22d3ee"
+                  : "#94a3b8"
+              }
+              transparent
+              opacity={
+                selected
+                  ? 0.98
+                  : 0.78
+              }
+              depthTest={false}
+              depthWrite={false}
+            />
+          </mesh>
+
+          {/* =================================================
+              CENTER DOT
+          ================================================= */}
+
+          <mesh
+            onClick={
+              handleClick
+            }
+            onPointerDown={(
+              event,
+            ) => {
+              event.stopPropagation();
+            }}
+            renderOrder={1002}
+          >
+            <circleGeometry
+              args={[
+                radius * 0.18,
+                16,
+              ]}
+            />
+
+            <meshBasicMaterial
+              color={
+                selected
+                  ? "#ffffff"
+                  : "#cbd5e1"
+              }
+              transparent
+              opacity={
+                selected
+                  ? 1
+                  : 0.78
+              }
+              depthTest={false}
+              depthWrite={false}
+            />
+          </mesh>
+        </group>
+      </Billboard>
+    </group>
+  );
+}
+
+type EngineInteractionMarkersProps = {
+  nodes: CarNodeRegistry;
+
+  visible: boolean;
+
+  selectedComponent:
+    | CarFocusComponent
+    | null;
+
+  onSelect: (
+    component: CarFocusComponent,
+  ) => void;
+};
+
+function EngineInteractionMarkers({
+  nodes,
+  visible,
+  selectedComponent,
+  onSelect,
+}: EngineInteractionMarkersProps) {
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <group>
+      {ENGINE_MARKERS.map(
+        ({
+          component,
+        }) => {
+          const target =
+            nodes.engine[
+              component
+            ];
+
+          return (
+            <EngineInteractionMarker
+              key={
+                component
+              }
+              target={
+                target
+              }
+              component={
+                component
+              }
+              selected={
+                selectedComponent ===
+                component
+              }
+              onSelect={
+                onSelect
+              }
+            />
+          );
+        },
+      )}
+    </group>
+  );
+}
+
+export type CarModelProps = {
+  onNodesReady?: (
+    nodes: CarNodeRegistry,
+  ) => void;
+
+  onNodeSelect?: (
+    component: CarFocusComponent,
+  ) => void;
+
+  engineFocus?: boolean;
+
+  focusComponent?:
+    | CarFocusComponent
+    | null;
+};
+
 export function CarModel({
   onNodesReady,
+  onNodeSelect,
   engineFocus = false,
+  focusComponent = null,
 }: CarModelProps) {
   const {
     scene,
@@ -227,13 +1288,57 @@ export function CarModel({
   );
 
   const originalMaterialsRef =
-    useRef<OriginalMaterialsMap>(
+    useRef<OriginalMaterialMap>(
       new Map(),
     );
 
   const focusMaterialsRef =
-    useRef<FocusMaterialsMap>(
+    useRef<FocusMaterialMap>(
       new Map(),
+    );
+
+  const originalRaycastsRef =
+    useRef<OriginalRaycastMap>(
+      new Map(),
+    );
+
+  const handleNodeClick =
+    useCallback(
+      (
+        event: ThreeEvent<MouseEvent>,
+      ) => {
+        event.stopPropagation();
+
+        const component =
+          resolveClickedComponent(
+            event.object,
+            nodes,
+          );
+
+        if (!component) {
+          return;
+        }
+
+        onNodeSelect?.(
+          component,
+        );
+      },
+      [
+        nodes,
+        onNodeSelect,
+      ],
+    );
+
+  const handleMarkerSelect =
+    useCallback(
+      (
+        component: CarFocusComponent,
+      ) => {
+        onNodeSelect?.(
+          component,
+        );
+      },
+      [onNodeSelect],
     );
 
   useEffect(() => {
@@ -253,7 +1358,9 @@ export function CarModel({
       nodes,
     );
 
-    onNodesReady?.(nodes);
+    onNodesReady?.(
+      nodes,
+    );
   }, [
     animations,
     nodes,
@@ -271,13 +1378,29 @@ export function CarModel({
       focusMaterials,
     );
 
-    if (engineFocus) {
-      applyEngineFocus(
-        scene,
-        nodes.engine.mechanism,
-        originalMaterials,
-        focusMaterials,
-      );
+    const activeFocus =
+      focusComponent ??
+      (engineFocus
+        ? "engine"
+        : null);
+
+    if (activeFocus) {
+      const focusRoot =
+        resolveFocusRoot(
+          nodes,
+          activeFocus,
+        );
+
+      if (focusRoot) {
+        applyFocus(
+          scene,
+          focusRoot,
+          activeFocus,
+          nodes,
+          originalMaterials,
+          focusMaterials,
+        );
+      }
     } else {
       restoreOriginalMaterials(
         originalMaterials,
@@ -295,16 +1418,74 @@ export function CarModel({
     };
   }, [
     engineFocus,
+    focusComponent,
     nodes,
     scene,
   ]);
 
+  useEffect(() => {
+    const internalFocusActive =
+      engineFocus ||
+      isEngineInternalComponent(
+        focusComponent,
+      );
+
+    updateEngineRaycastState(
+      scene,
+      nodes.engine
+        .mechanism,
+      internalFocusActive,
+      originalRaycastsRef.current,
+    );
+
+    return () => {
+      updateEngineRaycastState(
+        scene,
+        nodes.engine
+          .mechanism,
+        false,
+        originalRaycastsRef.current,
+      );
+    };
+  }, [
+    engineFocus,
+    focusComponent,
+    nodes,
+    scene,
+  ]);
+
+  const showEngineMarkers =
+    engineFocus ||
+    isEngineInternalComponent(
+      focusComponent,
+    );
+
   return (
-    <primitive
-      object={scene}
-      dispose={null}
-    />
+    <>
+      <primitive
+        object={scene}
+        dispose={null}
+        onClick={
+          handleNodeClick
+        }
+      />
+
+      <EngineInteractionMarkers
+        nodes={nodes}
+        visible={
+          showEngineMarkers
+        }
+        selectedComponent={
+          focusComponent
+        }
+        onSelect={
+          handleMarkerSelect
+        }
+      />
+    </>
   );
 }
 
-useGLTF.preload(MODEL_PATH);
+useGLTF.preload(
+  MODEL_PATH,
+);

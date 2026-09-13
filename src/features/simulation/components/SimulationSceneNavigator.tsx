@@ -196,12 +196,12 @@ export function SimulationSceneNavigator({
               </span>
 
               <span className="font-[var(--font-jetbrains-mono)] text-[9px] font-semibold text-white sm:text-[10px]">
-                {String(
-                  activeIndex +
-                    1,
+                {getSceneNumber(
+                activeSceneData?.label ??
+                    "",
                 ).padStart(
-                  2,
-                  "0",
+                2,
+                "0",
                 )}
               </span>
             </span>
@@ -251,12 +251,12 @@ export function SimulationSceneNavigator({
               </span>
 
               <span className="mt-1 block font-[var(--font-jetbrains-mono)] text-[8px] uppercase text-slate-500">
-                {String(
-                  activeIndex +
-                    1,
+                {getSceneNumber(
+                activeSceneData?.label ??
+                    "",
                 ).padStart(
-                  2,
-                  "0",
+                2,
+                "0",
                 )}
                 /
                 {String(

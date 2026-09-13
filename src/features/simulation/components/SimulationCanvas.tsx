@@ -30,7 +30,13 @@ import {
 
 import {
   CarModel,
+  type CarFocusComponent,
 } from "@/src/features/simulation/components/CarModel";
+
+import {
+  HybridSystem,
+  type HybridSystemProps,
+} from "@/src/features/simulation/components/HybridSystem";
 
 import {
   WheelSystem,
@@ -48,8 +54,8 @@ const FLOOR_Y = 0;
 
 const VISUAL_TRAVEL_SCALE = 0.12;
 
-type CameraFocus =
-  | "engine"
+export type CameraFocus =
+  | CarFocusComponent
   | null;
 
 type ControlsRef = RefObject<
@@ -60,16 +66,33 @@ type ControlsRef = RefObject<
 
 type CameraFocusControllerProps = {
   active: boolean;
-  focusObject?: Object3D;
+
+  focusObject?:
+    | Object3D
+    | undefined;
+
   controlsRef: ControlsRef;
+
+  focusVerticalOffset: number;
+
+  focusDistanceMultiplier: number;
+
+  focusMinimumDistance: number;
+
+  focusCameraOffset: [
+    number,
+    number,
+    number,
+  ];
 };
 
 type WorldAnchorProps = {
   target: Object3D;
+
   children: ReactNode;
 };
 
-type SimulationCanvasProps = {
+export type SimulationCanvasProps = {
   angularVelocity?: number;
 
   steeringAngle?: number;
@@ -106,6 +129,41 @@ type SimulationCanvasProps = {
 
   cameraFocus?: CameraFocus;
 
+  focusVerticalOffset?: number;
+
+  /**
+   * Controls automatic camera distance
+   * when entering focus mode.
+   *
+   * Lower = closer.
+   */
+  focusDistanceMultiplier?: number;
+
+  /**
+   * Minimum distance used by the automatic
+   * focus transition.
+   */
+  focusMinimumDistance?: number;
+
+  /**
+   * Additional camera position offset.
+   */
+  focusCameraOffset?: [
+    number,
+    number,
+    number,
+  ];
+
+  /**
+   * Manual orbit minimum zoom distance.
+   */
+  minDistance?: number;
+
+  /**
+   * Manual orbit maximum zoom distance.
+   */
+  maxDistance?: number;
+
   fullScreen?: boolean;
 
   engineOverlay?: ReactNode;
@@ -113,6 +171,15 @@ type SimulationCanvasProps = {
   engineRunning?: boolean;
 
   enginePlaybackRate?: number;
+
+  hybrid?: Omit<
+    HybridSystemProps,
+    "nodes"
+  >;
+
+  onNodeSelect?: (
+    component: CarFocusComponent,
+  ) => void;
 
   children?: ReactNode;
 };
@@ -144,7 +211,8 @@ function SimulationFloor({
       movement;
 
     gridRef.current.position.z =
-      ((nextPosition % 1) + 1) % 1;
+      ((nextPosition % 1) + 1) %
+      1;
   });
 
   return (
@@ -162,7 +230,10 @@ function SimulationFloor({
         ]}
       >
         <planeGeometry
-          args={[30, 30]}
+          args={[
+            30,
+            30,
+          ]}
         />
 
         <meshStandardMaterial
@@ -199,10 +270,14 @@ function WorldAnchor({
     );
 
   const worldPositionRef =
-    useRef(new Vector3());
+    useRef(
+      new Vector3(),
+    );
 
   const worldQuaternionRef =
-    useRef(new Quaternion());
+    useRef(
+      new Quaternion(),
+    );
 
   useFrame(() => {
     const group =
@@ -223,11 +298,10 @@ function WorldAnchor({
     group.position.copy(
       worldPositionRef.current,
     );
-    
+
     group.quaternion.copy(
       worldQuaternionRef.current,
     );
-    
   });
 
   return (
@@ -241,6 +315,10 @@ function CameraFocusController({
   active,
   focusObject,
   controlsRef,
+  focusVerticalOffset,
+  focusDistanceMultiplier,
+  focusMinimumDistance,
+  focusCameraOffset,
 }: CameraFocusControllerProps) {
   const { camera } =
     useThree();
@@ -248,26 +326,45 @@ function CameraFocusController({
   const previousActiveRef =
     useRef(active);
 
+  const previousFocusObjectRef =
+    useRef<
+      Object3D | undefined
+    >(focusObject);
+
   const startCameraRef =
-    useRef(new Vector3());
+    useRef(
+      new Vector3(),
+    );
 
   const endCameraRef =
-    useRef(new Vector3());
+    useRef(
+      new Vector3(),
+    );
 
   const startTargetRef =
-    useRef(new Vector3());
+    useRef(
+      new Vector3(),
+    );
 
   const endTargetRef =
-    useRef(new Vector3());
+    useRef(
+      new Vector3(),
+    );
 
   const restoreCameraRef =
-    useRef(new Vector3());
+    useRef(
+      new Vector3(),
+    );
 
   const restoreTargetRef =
-    useRef(new Vector3());
+    useRef(
+      new Vector3(),
+    );
 
   const transitionStartRef =
-    useRef<number | null>(null);
+    useRef<number | null>(
+      null,
+    );
 
   const transitioningRef =
     useRef(false);
@@ -280,21 +377,24 @@ function CameraFocusController({
       return;
     }
 
-    if (
+    const focusChanged =
+      previousFocusObjectRef.current !==
+      focusObject;
+
+    const enteringFocus =
       !previousActiveRef.current &&
-      !active
-    ) {
-      return;
-    }
+      active;
+
+    const leavingFocus =
+      previousActiveRef.current &&
+      !active;
 
     if (
-      !previousActiveRef.current &&
-      active
+      active &&
+      focusObject &&
+      (enteringFocus ||
+        focusChanged)
     ) {
-      if (!focusObject) {
-        return;
-      }
-
       startCameraRef.current.copy(
         camera.position,
       );
@@ -303,20 +403,30 @@ function CameraFocusController({
         controls.target,
       );
 
-      restoreCameraRef.current.copy(
-        camera.position,
-      );
+      if (enteringFocus) {
+        restoreCameraRef.current.copy(
+          camera.position,
+        );
 
-      restoreTargetRef.current.copy(
-        controls.target,
-      );
+        restoreTargetRef.current.copy(
+          controls.target,
+        );
+      }
 
       const bounds =
         new Box3().setFromObject(
           focusObject,
         );
 
-      if (bounds.isEmpty()) {
+      if (
+        bounds.isEmpty()
+      ) {
+        previousActiveRef.current =
+          active;
+
+        previousFocusObjectRef.current =
+          focusObject;
+
         return;
       }
 
@@ -330,10 +440,23 @@ function CameraFocusController({
           new Vector3(),
         );
 
+      /**
+       * Keep the camera focused on the
+       * overall engine mechanism rather
+       * than the tiny selected component.
+       *
+       * This prevents the camera from
+       * aggressively zooming into a piston
+       * or connecting rod.
+       */
+      const calculatedDistance =
+        size.length() *
+        focusDistanceMultiplier;
+
       const distance =
         Math.max(
-          size.length() * 2.4,
-          3.2,
+          calculatedDistance,
+          focusMinimumDistance,
         );
 
       const direction =
@@ -359,19 +482,24 @@ function CameraFocusController({
         .addScaledVector(
           direction,
           distance,
-        );
-
-      endCameraRef.current.y +=
-        Math.max(
-          size.y * 0.3,
-          0.5,
+        )
+        .add(
+          new Vector3(
+            focusCameraOffset[0],
+            focusCameraOffset[1],
+            focusCameraOffset[2],
+          ),
         );
 
       endTargetRef.current.copy(
         center,
       );
 
-      controls.enabled = false;
+      endTargetRef.current.y +=
+        focusVerticalOffset;
+
+      controls.enabled =
+        false;
 
       transitionStartRef.current =
         performance.now();
@@ -380,10 +508,7 @@ function CameraFocusController({
         true;
     }
 
-    if (
-      previousActiveRef.current &&
-      !active
-    ) {
+    if (leavingFocus) {
       startCameraRef.current.copy(
         camera.position,
       );
@@ -400,7 +525,8 @@ function CameraFocusController({
         restoreTargetRef.current,
       );
 
-      controls.enabled = false;
+      controls.enabled =
+        false;
 
       transitionStartRef.current =
         performance.now();
@@ -411,11 +537,18 @@ function CameraFocusController({
 
     previousActiveRef.current =
       active;
+
+    previousFocusObjectRef.current =
+      focusObject;
   }, [
     active,
     camera,
     controlsRef,
+    focusCameraOffset,
+    focusDistanceMultiplier,
+    focusMinimumDistance,
     focusObject,
+    focusVerticalOffset,
   ]);
 
   useFrame(() => {
@@ -447,8 +580,7 @@ function CameraFocusController({
 
     const smoothProgress =
       1 -
-      (1 -
-        progress) ** 3;
+      (1 - progress) ** 3;
 
     camera.position.lerpVectors(
       startCameraRef.current,
@@ -471,7 +603,8 @@ function CameraFocusController({
       transitionStartRef.current =
         null;
 
-      controls.enabled = true;
+      controls.enabled =
+        true;
     }
   });
 
@@ -480,7 +613,9 @@ function CameraFocusController({
 
 export function SimulationCanvas({
   angularVelocity = 0,
+
   steeringAngle = 0,
+
   resetKey = 0,
 
   motionSpeedMs = 0,
@@ -513,6 +648,28 @@ export function SimulationCanvas({
 
   cameraFocus = null,
 
+  focusVerticalOffset = 0,
+
+  /**
+   * More conservative default focus.
+   *
+   * This keeps existing scenes visually
+   * close to their current behavior.
+   */
+  focusDistanceMultiplier = 2.4,
+
+  focusMinimumDistance = 2.5,
+
+  focusCameraOffset = [
+    0,
+    0,
+    0,
+  ],
+
+  minDistance = 3.5,
+
+  maxDistance = 14,
+
   fullScreen = false,
 
   engineOverlay,
@@ -520,6 +677,10 @@ export function SimulationCanvas({
   engineRunning = false,
 
   enginePlaybackRate = 1,
+
+  hybrid,
+
+  onNodeSelect,
 
   children,
 }: SimulationCanvasProps) {
@@ -543,17 +704,18 @@ export function SimulationCanvas({
       (
         nodes: CarNodeRegistry,
       ) => {
-        setCarNodes(nodes);
+        setCarNodes(
+          nodes,
+        );
       },
       [],
     );
 
   const focusObject =
-    cameraFocus ===
-    "engine"
-      ? carNodes?.engine
-          .mechanism
-      : undefined;
+    getFocusObject(
+      carNodes,
+      cameraFocus,
+    );
 
   const engineWheelVelocity =
     engineRunning
@@ -562,15 +724,6 @@ export function SimulationCanvas({
         )
       : 0;
 
-  /**
-   * Explicit angularVelocity
-   * takes priority.
-   *
-   * This keeps vehicle-specific
-   * scenes such as Kinetic Energy
-   * compatible with their existing
-   * wheel control.
-   */
   const finalWheelAngularVelocity =
     angularVelocity !== 0
       ? angularVelocity
@@ -595,7 +748,9 @@ export function SimulationCanvas({
       >
         <color
           attach="background"
-          args={["#0f172a"]}
+          args={[
+            "#0f172a",
+          ]}
         />
 
         <ambientLight
@@ -635,6 +790,12 @@ export function SimulationCanvas({
               cameraFocus ===
               "engine"
             }
+            focusComponent={
+              cameraFocus
+            }
+            onNodeSelect={
+              onNodeSelect
+            }
           />
 
           {carNodes && (
@@ -655,9 +816,35 @@ export function SimulationCanvas({
           )}
         </group>
 
+        {carNodes &&
+          hybrid && (
+            <HybridSystem
+              nodes={
+                carNodes
+              }
+              inputPowerKw={
+                hybrid.inputPowerKw
+              }
+              efficiency={
+                hybrid.efficiency
+              }
+              running={
+                hybrid.running
+              }
+              activeComponent={
+                hybrid.activeComponent
+              }
+              onSelect={
+                hybrid.onSelect
+              }
+              resetKey={
+                resetKey
+              }
+            />
+          )}
+
         {focusObject &&
-          cameraFocus ===
-            "engine" &&
+          cameraFocus &&
           engineOverlay && (
             <WorldAnchor
               target={
@@ -677,8 +864,12 @@ export function SimulationCanvas({
           }
           enableDamping
           dampingFactor={0.08}
-          minDistance={3.5}
-          maxDistance={14}
+          minDistance={
+            minDistance
+          }
+          maxDistance={
+            maxDistance
+          }
           minPolarAngle={
             Math.PI * 0.35
           }
@@ -689,8 +880,8 @@ export function SimulationCanvas({
 
         <CameraFocusController
           active={
-            cameraFocus ===
-            "engine"
+            cameraFocus !==
+            null
           }
           focusObject={
             focusObject
@@ -698,8 +889,95 @@ export function SimulationCanvas({
           controlsRef={
             controlsRef
           }
+          focusVerticalOffset={
+            focusVerticalOffset
+          }
+          focusDistanceMultiplier={
+            focusDistanceMultiplier
+          }
+          focusMinimumDistance={
+            focusMinimumDistance
+          }
+          focusCameraOffset={
+            focusCameraOffset
+          }
         />
       </Canvas>
     </div>
   );
+}
+
+function getFocusObject(
+  nodes:
+    | CarNodeRegistry
+    | null,
+  focus:
+    | CameraFocus
+    | null,
+) {
+  if (!nodes || !focus) {
+    return undefined;
+  }
+
+  /**
+   * IMPORTANT:
+   *
+   * Internal engine parts all use the
+   * complete engine mechanism as camera
+   * target.
+   *
+   * The selected piston / rod / crankshaft
+   * is highlighted separately by CarModel.
+   *
+   * This gives a stable "front engine view"
+   * instead of zooming into tiny meshes.
+   */
+  if (
+    focus ===
+      "crankshaft" ||
+    focus ===
+      "piston1" ||
+    focus ===
+      "rod1" ||
+    focus ===
+      "piston2" ||
+    focus ===
+      "rod2" ||
+    focus ===
+      "piston3" ||
+    focus ===
+      "rod3" ||
+    focus ===
+      "piston4" ||
+    focus ===
+      "rod4"
+  ) {
+    return nodes.engine
+      .mechanism;
+  }
+
+  switch (focus) {
+    case "engine":
+      return nodes.engine
+        .mechanism;
+
+    case "generator":
+      return nodes.hybrid
+        .generator;
+
+    case "inverter":
+      return nodes.hybrid
+        .inverter;
+
+    case "electricMotor":
+      return nodes.hybrid
+        .electricMotor;
+
+    case "battery":
+      return nodes.hybrid
+        .battery;
+
+    default:
+      return undefined;
+  }
 }
