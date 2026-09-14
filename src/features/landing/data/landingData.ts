@@ -83,23 +83,23 @@ export const landingModules: LandingModule[] = [
 
 export const landingStats: LandingStat[] = [
   {
-    value: "03",
-    label: "Learning Modules",
-    description: "Thermodynamics engineering curriculum",
-  },
-  {
-    value: "10",
-    label: "Interactive Scenes",
-    description: "Simulation-driven learning experiences",
-  },
-  {
     value: "01",
     label: "Shared Vehicle Model",
     description: "Interactive 3D engineering model",
   },
   {
+    value: "03",
+    label: "Modul Inti Kuliah",
+    description: "Sistem, Hukum I, & Hybrid",
+  },
+  {
+    value: "10",
+    label: "Interactive Scenes",
+    description: "Simulasi berbasis web dengan kendali parameter",
+  },
+  {
     value: "AR",
     label: "Spatial Visualization",
-    description: "Web-based interactive visualization",
+    description: "Visualisasi 3D interaktif berbasis web",
   },
 ];

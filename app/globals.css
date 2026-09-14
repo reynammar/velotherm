@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @import "../src/styles/token.css";
 
+@theme inline {
+  --font-body: var(--font-inter);
+  --font-racing: var(--font-oswald);
+  --font-tech: var(--font-chakra-petch);
+  --font-formula: var(--font-jetbrains-mono);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -13,7 +20,7 @@ body {
   margin: 0;
   background: var(--color-brand-bg);
   color: var(--color-brand-charcoal);
-  font-family: var(--font-inter), sans-serif;
+  font-family: var(--font-body), sans-serif;
 }
 
 button,
@@ -25,6 +32,10 @@ select {
 
 button {
   cursor: pointer;
+}
+
+a {
+  text-decoration: none;
 }
 
 ::selection {

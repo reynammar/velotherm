@@ -1,20 +1,44 @@
-import { Check } from "lucide-react";
+import Image from "next/image";
+import { FaAtom, FaCheck } from "react-icons/fa6";
+
+const principlesImage =
+  "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=1200&q=85";
 
 const principles = [
   {
-    title: "Macroscopic Classical Approach",
-    description:
-      "Analyze measurable system properties such as temperature, pressure, and volume without tracking individual molecular motion.",
+    title: "Pendekatan Makroskopis Klasik",
+    description: (
+      <>
+        Menganalisis sistem agregat materi secara makro (
+        <span className="font-formula text-slate-700">T, P, V</span>
+        ) tanpa perlu melacak dinamika statistik triliunan molekul individual.
+      </>
+    ),
   },
   {
-    title: "First Law & Boundary Work",
-    description:
-      "Understand energy conservation in closed systems through heat transfer, work, and piston-driven boundary interaction.",
+    title: "Hukum I: Neraca Energi & Kerja Batas",
+    description: (
+      <>
+        Kekekalan energi sistem tertutup: perubahan energi internal didorong
+        oleh selisih kalor masuk dan kerja ekspansi batas piston (
+        <span className="font-formula font-semibold text-slate-700">
+          ΔE = Q - W
+        </span>
+        ).
+      </>
+    ),
   },
   {
-    title: "Cycles & Hybrid Conservation",
-    description:
-      "Connect thermodynamic cycles with regenerative braking and the conversion of kinetic energy into stored battery energy.",
+    title: "Siklus Tertutup & Konservasi Hybrid",
+    description: (
+      <>
+        Penerapan siklus daya periodik (
+        <span className="font-formula font-semibold text-slate-700">
+          ΔE<sub>siklus</sub> = 0
+        </span>
+        ) dan pemulihan energi kinetik melalui sistem pengereman regeneratif.
+      </>
+    ),
   },
 ];
 
@@ -22,40 +46,45 @@ export function PrinciplesSection() {
   return (
     <section
       id="principles"
-      className="border-b border-slate-200 bg-[color:var(--color-brand-bg)]"
+      className="relative border-b border-slate-200 bg-[color:var(--color-brand-bg)] py-20 lg:py-24"
     >
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-24">
-        <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
-          <div className="lg:col-span-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-16">
+          {/* Left Content */}
+          <div className="space-y-6 lg:col-span-6">
+            {/* Section Badge */}
             <div
-              className="mb-6 inline-flex items-center gap-2 bg-slate-200/90 px-3.5 py-1.5 font-[var(--font-chakra-petch)] text-[10px] font-bold uppercase tracking-wider text-slate-800"
+              className="inline-flex items-center gap-2 bg-slate-200/90 px-3.5 py-1.5 font-tech text-xs font-bold uppercase tracking-wider text-slate-800"
               style={{
                 clipPath: "var(--clip-chamfer-sm)",
               }}
             >
-              <span className="text-[color:var(--color-brand-red)]">◈</span>
-              Automotive Science Foundation
+              <FaAtom className="text-[color:var(--color-brand-red)]" />
+              <span>Fondasi Sains Otomotif</span>
             </div>
 
-            <h2 className="font-[var(--font-oswald)] text-3xl font-bold uppercase leading-tight tracking-tight text-[color:var(--color-brand-charcoal)] sm:text-5xl">
-              Thermodynamics Principles for{" "}
+            {/* Heading */}
+            <h2 className="font-racing text-3xl font-bold uppercase leading-[1.05] tracking-tight text-[color:var(--color-brand-charcoal)] sm:text-5xl">
+              Prinsip Termodinamika{" "}
               <span className="text-[color:var(--color-brand-red)]">
-                Engines & Powertrains
+                Mesin &amp; Powertrain
               </span>
             </h2>
 
-            <p className="mt-6 text-base leading-relaxed text-[color:var(--color-brand-muted)]">
-              Thermodynamics explains how heat, work, and energy interact
-              inside engineering systems. In automotive applications, the
-              same principles describe engine operation, energy conversion,
-              thermal efficiency, and regenerative vehicle systems.
+            {/* Description */}
+            <p className="max-w-2xl font-body text-base leading-relaxed text-slate-600">
+              Termodinamika teknik mempelajari transformasi energi antara kalor
+              dan kerja mekanis. Dalam dunia otomotif modern, pemahaman ini
+              melandasi efisiensi ruang bakar mesin bensin &amp; diesel hingga
+              konservasi energi pengereman kendaraan hybrid.
             </p>
 
-            <div className="mt-8 space-y-3.5">
+            {/* Principle Cards */}
+            <div className="space-y-3.5 pt-2">
               {principles.map((principle) => (
-                <div
+                <article
                   key={principle.title}
-                  className="flex items-start gap-4 border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-[color:var(--color-brand-red)]/40"
+                  className="group flex items-start gap-4 border border-slate-200 bg-white p-4 shadow-sm transition-colors duration-200 hover:border-[color:var(--color-brand-red)]/50"
                   style={{
                     clipPath: "var(--clip-chamfer-lg)",
                   }}
@@ -66,81 +95,48 @@ export function PrinciplesSection() {
                       clipPath: "var(--clip-chamfer-sm)",
                     }}
                   >
-                    <Check className="size-4" />
+                    <FaCheck className="text-xs" />
                   </div>
 
-                  <div>
-                    <h3 className="font-[var(--font-chakra-petch)] text-xs font-bold uppercase tracking-wide text-[color:var(--color-brand-charcoal)] sm:text-sm">
+                  <div className="min-w-0">
+                    <h3 className="font-body text-sm font-bold uppercase text-[color:var(--color-brand-charcoal)]">
                       {principle.title}
                     </h3>
 
-                    <p className="mt-1 text-xs leading-relaxed text-slate-500 sm:text-sm">
+                    <p className="mt-1 font-body text-xs leading-relaxed text-slate-500">
                       {principle.description}
                     </p>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           </div>
 
+          {/* Right Visual */}
           <div className="lg:col-span-6">
-            <div
-              className="relative overflow-hidden border-2 border-slate-200 bg-[color:var(--color-brand-surface)] shadow-[var(--shadow-card)]"
-              style={{
-                clipPath: "var(--clip-chamfer-lg)",
-              }}
-            >
-              <div className="aspect-[4/3] bg-[color:var(--color-brand-charcoal)]">
-                <div className="relative h-full overflow-hidden">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(220,38,38,0.2),transparent_38%)]" />
+            <div className="relative">
+              <div
+                className="relative overflow-hidden border-2 border-slate-200 bg-white shadow-[var(--shadow-card)]"
+                style={{
+                  clipPath: "var(--clip-chamfer-lg)",
+                }}
+              >
+                <div className="relative h-80 w-full sm:h-96">
+                  <Image
+                    src={principlesImage}
+                    alt="Detail mesin otomotif dan sistem powertrain"
+                    fill
+                    sizes="(min-width: 1024px) 50vw, 100vw"
+                    className="object-cover"
+                  />
 
-                  <div className="absolute inset-0 opacity-15">
-                    <div
-                      className="h-full w-full"
-                      style={{
-                        backgroundImage:
-                          "linear-gradient(rgba(148,163,184,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.2) 1px, transparent 1px)",
-                        backgroundSize: "28px 28px",
-                      }}
-                    />
-                  </div>
-
-                  <div className="absolute left-[15%] top-[18%] h-[52%] w-[70%] border-2 border-slate-500/50">
-                    <div className="absolute left-[8%] top-[8%] h-[84%] w-[22%] border border-red-400/50" />
-                    <div className="absolute right-[8%] top-[8%] h-[84%] w-[22%] border border-red-400/50" />
-                    <div className="absolute left-[35%] top-[15%] h-[70%] w-[30%] border border-cyan-400/40" />
-                    <div className="absolute left-1/2 top-[-20%] h-1/2 w-0.5 -translate-x-1/2 bg-[color:var(--color-brand-red)]" />
-                  </div>
-
-                  <div className="absolute bottom-6 left-6 right-6">
-                    <div className="font-[var(--font-jetbrains-mono)] text-[10px] uppercase tracking-wider text-[color:var(--color-brand-red)]">
-                      SYSTEM / BOUNDARY / ENERGY
-                    </div>
-
-                    <div className="mt-2 font-[var(--font-oswald)] text-3xl font-bold uppercase text-white sm:text-4xl">
-                      Engineering{" "}
-                      <span className="text-[color:var(--color-brand-red)]">
-                        Foundations
-                      </span>
-                    </div>
-                  </div>
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[color:var(--color-brand-charcoal)]/40 via-transparent to-transparent" />
                 </div>
               </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-3 gap-3 font-[var(--font-jetbrains-mono)]">
-              {["SYSTEM", "ENERGY", "WORK"].map((item) => (
-                <div
-                  key={item}
-                  className="border border-slate-200 bg-white px-3 py-2 text-center text-[9px] font-bold tracking-wider text-slate-500"
-                >
-                  {item}
-                </div>
-              ))}
             </div>
           </div>
         </div>
       </div>
     </section>
   );
-}   
+}

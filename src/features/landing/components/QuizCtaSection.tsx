@@ -1,23 +1,29 @@
 import Link from "next/link";
-import { ArrowRight, Bolt, Flag, ListChecks, Trophy } from "lucide-react";
+import {
+  ArrowRight,
+  Bolt,
+  Flag,
+  ListChecks,
+  Trophy,
+} from "lucide-react";
 
 const quizFeatures = [
   {
-    title: "Structured Questions",
+    title: "Struktur Soal Terstandar",
     description:
-      "Standardized multiple-choice questions based on the thermodynamics curriculum.",
+      "Pilihan ganda dengan tingkat kesulitan seimbang sesuai slide perkuliahan.",
     icon: <ListChecks className="size-4" />,
   },
   {
-    title: "Instant Feedback",
+    title: "Feedback & Penjelasan",
     description:
-      "Review your answers and understand the underlying engineering concepts.",
+      "Penjelasan ilmiah instan atas setiap kunci jawaban benar.",
     icon: <Bolt className="size-4" />,
   },
   {
-    title: "Final Score",
+    title: "Kalkulasi Skor Akhir",
     description:
-      "Receive a final score together with a concise evaluation of your performance.",
+      "Skor nilai skala 0-100 disertai evaluasi tingkat pemahaman materi.",
     icon: <Trophy className="size-4" />,
   },
 ];
@@ -26,6 +32,7 @@ export function QuizCtaSection() {
   return (
     <section className="relative overflow-hidden bg-[#0d121d] text-white">
       <div
+        aria-hidden="true"
         className="absolute inset-0 opacity-60"
         style={{
           backgroundImage:
@@ -42,32 +49,37 @@ export function QuizCtaSection() {
             clipPath: "var(--clip-chamfer-lg)",
           }}
         >
+          {/* Accent Line */}
           <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[color:var(--color-brand-red)] via-[color:var(--color-brand-crimson)] to-amber-500" />
 
+          {/* Badge */}
           <div
-            className="inline-flex items-center gap-2 border border-[color:var(--color-brand-red)]/40 bg-red-950/70 px-4 py-1.5 font-[var(--font-chakra-petch)] text-[10px] font-bold uppercase tracking-wider text-red-300"
+            className="inline-flex items-center gap-2 border border-[color:var(--color-brand-red)]/40 bg-red-950/70 px-4 py-1.5 font-tech text-[10px] font-bold uppercase tracking-wider text-red-300"
             style={{
               clipPath: "var(--clip-chamfer-sm)",
             }}
           >
             <Flag className="size-3.5 text-[color:var(--color-brand-red)]" />
-            Knowledge Evaluation
+            Kuis Pemahaman Evaluasi
           </div>
 
-          <h2 className="mx-auto mt-5 max-w-3xl font-[var(--font-oswald)] text-3xl font-bold uppercase leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-            Test Your{" "}
+          {/* Heading */}
+          <h2 className="mx-auto mt-5 max-w-3xl font-racing text-3xl font-bold uppercase leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+            Uji Pemahaman{" "}
             <span className="text-[color:var(--color-brand-red)]">
-              Thermodynamics
+              Termodinamika
             </span>{" "}
-            Knowledge
+            Kamu
           </h2>
 
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
-            Challenge your understanding of energy, work, heat transfer,
-            boundary work, and the First Law through a structured engineering
-            evaluation.
+          {/* Description */}
+          <p className="mx-auto mt-4 max-w-2xl font-body text-sm leading-relaxed text-slate-300 sm:text-base">
+            Tantang diri Anda dengan butir soal evaluasi terstruktur: batasan
+            sistem tertutup vs terbuka, perhitungan kerja batas kurva p-V,
+            hingga prinsip termodinamika pengereman regeneratif hybrid.
           </p>
 
+          {/* Features */}
           <div className="mx-auto mt-8 grid max-w-3xl gap-4 text-left sm:grid-cols-3">
             {quizFeatures.map((feature) => (
               <div
@@ -86,27 +98,29 @@ export function QuizCtaSection() {
                   {feature.icon}
                 </div>
 
-                <h3 className="font-[var(--font-chakra-petch)] text-xs font-bold uppercase text-white">
+                <h3 className="font-tech text-xs font-bold uppercase text-white">
                   {feature.title}
                 </h3>
 
-                <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                <p className="mt-1 font-body text-[11px] leading-relaxed text-slate-400">
                   {feature.description}
                 </p>
               </div>
             ))}
           </div>
 
+          {/* CTA */}
           <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             <Link
               href="/quiz"
-              className="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-[color:var(--color-brand-red)] to-[color:var(--color-brand-crimson)] px-8 py-4 font-[var(--font-chakra-petch)] text-xs font-bold uppercase tracking-wider text-white shadow-[var(--shadow-glow-red)] transition-all hover:brightness-110 active:scale-[0.99]"
+              className="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-[color:var(--color-brand-red)] to-[color:var(--color-brand-crimson)] px-8 py-4 font-tech text-xs font-bold uppercase tracking-wider text-white shadow-[var(--shadow-glow-red)] transition-all hover:brightness-110 active:scale-[0.99]"
               style={{
                 clipPath: "var(--clip-chamfer-md)",
               }}
             >
-              Start Quiz for Evaluation
-              <ArrowRight className="size-4" />
+              <span>Masuk ke Halaman Kuis</span>
+
+              <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
           </div>
         </div>

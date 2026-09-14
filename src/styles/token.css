@@ -1,8 +1,5 @@
 :root {
-  /* =================================
-     BRAND COLORS
-  ================================= */
-
+  /* Brand Colors */
   --color-brand-red: #dc2626;
   --color-brand-crimson: #e11d48;
   --color-brand-dark-red: #991b1b;
@@ -14,23 +11,17 @@
   --color-brand-bg: #f8fafc;
   --color-brand-bg-muted: #f1f5f9;
   --color-brand-surface: #ffffff;
-  --color-brand-muted: #64748b;
 
+  --color-brand-muted: #64748b;
   --color-brand-cyan: #0891b2;
 
-  /* =================================
-     SEMANTIC COLORS
-  ================================= */
-
+  /* Status */
   --color-status-warning: #f59e0b;
   --color-status-success: #10b981;
   --color-status-error: #e11d48;
   --color-status-info: #0ea5e9;
 
-  /* =================================
-     BORDERS
-  ================================= */
-
+  /* Border */
   --border-width-default: 1px;
   --border-width-strong: 2px;
 
@@ -38,70 +29,57 @@
   --border-color-dark: #334155;
   --border-color-active: var(--color-brand-red);
 
-  /* =================================
-     CHAMFER
-  ================================= */
+  /* Chamfer */
+  --clip-chamfer-sm: polygon(
+    0 0,
+    calc(100% - 6px) 0,
+    100% 6px,
+    100% 100%,
+    6px 100%,
+    0 calc(100% - 6px)
+  );
 
-  --clip-chamfer-sm:
-    polygon(
-      6px 0,
-      100% 0,
-      100% calc(100% - 6px),
-      calc(100% - 6px) 100%,
-      0 100%,
-      0 6px
-    );
+  --clip-chamfer-md: polygon(
+    0 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% 100%,
+    10px 100%,
+    0 calc(100% - 10px)
+  );
 
-  --clip-chamfer-md:
-    polygon(
-      10px 0,
-      100% 0,
-      100% calc(100% - 10px),
-      calc(100% - 10px) 100%,
-      0 100%,
-      0 10px
-    );
+  --clip-chamfer-lg: polygon(
+    0 0,
+    calc(100% - 16px) 0,
+    100% 16px,
+    100% 100%,
+    16px 100%,
+    0 calc(100% - 16px)
+  );
 
-  --clip-chamfer-lg:
-    polygon(
-      16px 0,
-      100% 0,
-      100% calc(100% - 16px),
-      calc(100% - 16px) 100%,
-      0 100%,
-      0 16px
-    );
-
-  /* =================================
-     SHADOWS
-  ================================= */
-
+  /* Shadows */
   --shadow-card:
-    0 4px 14px rgba(15, 23, 42, 0.08);
+    0 10px 25px -5px rgba(15, 23, 42, 0.05),
+    0 8px 10px -6px rgba(15, 23, 42, 0.03);
 
   --shadow-card-hover:
-    0 10px 24px rgba(15, 23, 42, 0.12);
+    0 20px 35px -5px rgba(15, 23, 42, 0.1),
+    0 10px 10px -5px rgba(15, 23, 42, 0.04);
 
   --shadow-glow-red:
-    0 0 20px rgba(220, 38, 38, 0.25);
+    0 0 25px -3px rgba(220, 38, 38, 0.45);
 
   --shadow-glow-red-lg:
-    0 0 36px rgba(220, 38, 38, 0.35);
+    0 0 45px -5px rgba(225, 29, 72, 0.65);
 
-  /* =================================
-     MOTION
-  ================================= */
-
+  /* Motion */
   --duration-fast: 150ms;
   --duration-base: 250ms;
   --duration-slow: 650ms;
 
   --ease-technical: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* =================================
-     SPACING
-  ================================= */
-
+  /* Layout */
   --space-section: 6rem;
   --space-panel: 1.5rem;
   --space-control: 1rem;
