@@ -1,5 +1,5 @@
-import { QuizWorkspace } from "@/src/features/quiz/components/QuizWorkspace";
+import { redirect } from "next/navigation";
 
-export default function QuizAttemptPage() {
-  return <QuizWorkspace />;
+export default function QuizAttemptRootPage() {
+  redirect("/quiz");
 }
