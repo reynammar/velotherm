@@ -31,7 +31,7 @@ const jetBrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "VeloTherm",
   description:
-    "Interactive thermodynamics and energy learning platform.",
+    "Interactive thermodynamics and energy learning platform for automotive engineering.",
 };
 
 export default function RootLayout({
