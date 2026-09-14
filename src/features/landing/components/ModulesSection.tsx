@@ -1,182 +1,141 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ArrowRight,
-  BatteryCharging,
-  Bolt,
-  Box,
-  FileText,
-  FlaskConical,
-  GraduationCap,
-} from "lucide-react";
+import { ArrowRight, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { landingModules } from "../data/landingData";
 
-const moduleIcons = [Box, Bolt, BatteryCharging];
-
 export function ModulesSection() {
-  const [isVisible, setIsVisible] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
-      setIsVisible(true);
+    const frame = requestAnimationFrame(() => {
+      setVisible(true);
     });
 
     return () => {
-      window.cancelAnimationFrame(frameId);
+      cancelAnimationFrame(frame);
     };
   }, []);
 
   return (
     <section
       id="modules"
-      className="border-b border-slate-200 bg-white"
+      className="relative border-b border-slate-200 bg-white py-20 lg:py-28"
     >
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-        {/* Section Header */}
-        <div className="mx-auto mb-14 max-w-3xl text-center">
-          <div
-            className="mb-3 inline-flex items-center gap-2 border border-red-200 bg-red-50 px-4 py-1.5 font-tech text-[10px] font-bold uppercase tracking-wider text-[color:var(--color-brand-red)]"
-            style={{
-              clipPath: "var(--clip-chamfer-sm)",
-            }}
-          >
-            <GraduationCap className="size-3.5" />
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto mb-16 max-w-3xl text-center">
+          <div className="mb-3 inline-flex items-center gap-2 bg-red-50 px-4 py-1.5 font-tech text-xs font-bold uppercase tracking-wider text-[color:var(--color-brand-red)]">
+            <span>◆</span>
             <span>Kurikulum Perkuliahan Teknik</span>
           </div>
 
-          <h2 className="font-racing text-3xl font-bold uppercase leading-[1.05] tracking-tight text-[color:var(--color-brand-charcoal)] sm:text-5xl">
+          <h2 className="font-racing text-3xl font-bold uppercase tracking-tight text-[color:var(--color-brand-charcoal)] sm:text-5xl">
             3 Modul{" "}
             <span className="text-[color:var(--color-brand-red)]">
               Termodinamika Teknik
             </span>
           </h2>
 
-          <p className="mx-auto mt-4 max-w-3xl font-body text-sm leading-relaxed text-[color:var(--color-brand-muted)] sm:text-base">
-            Materi lengkap 100% disusun sesuai slide presentasi perkuliahan
-            teknik mesin. Klik tombol untuk membuka Interactive Full-Page
-            Reader.
+          <p className="mt-3 font-body text-base leading-relaxed text-slate-600">
+            Materi lengkap disusun berdasarkan struktur materi perkuliahan
+            teknik mesin. Pelajari konsepnya terlebih dahulu, lalu lanjutkan
+            ke visualisasi interaktif untuk memahami penerapannya.
           </p>
         </div>
 
-        {/* Modules */}
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
           {landingModules.map((module, index) => {
-            const Icon = moduleIcons[index];
+            const Icon = module.Icon;
 
             return (
               <article
                 key={module.number}
                 className={[
-                  "group flex flex-col border-2 border-slate-200 bg-[color:var(--color-brand-bg)] p-8",
+                  "group flex flex-col justify-between border-2 border-slate-200",
+                  "bg-[color:var(--color-brand-bg)] p-8",
                   "shadow-[var(--shadow-card)]",
-                  "transition-all duration-700 ease-[var(--ease-technical)]",
-                  "hover:-translate-y-1 hover:border-[color:var(--color-brand-red)]/60",
+                  "transition-all duration-500",
+                  "hover:border-[color:var(--color-brand-red)]/60",
                   "hover:shadow-[var(--shadow-card-hover)]",
-                  isVisible
+                  visible
                     ? "translate-y-0 opacity-100"
-                    : "translate-y-6 opacity-0",
+                    : "translate-y-4 opacity-0",
                 ].join(" ")}
                 style={{
                   clipPath: "var(--clip-chamfer-lg)",
-                  transitionDelay: `${index * 120}ms`,
+                  transitionDelay: `${index * 100}ms`,
                 }}
               >
-                {/* Card Top */}
-                <div className="flex items-center justify-between gap-4">
-                  <div
-                    className="flex size-13 items-center justify-center bg-[color:var(--color-brand-charcoal)] text-white transition-colors duration-300 group-hover:bg-[color:var(--color-brand-red)]"
-                    style={{
-                      clipPath: "var(--clip-chamfer-sm)",
-                    }}
-                  >
-                    <Icon className="size-6" />
-                  </div>
+                <div>
+                  <div className="mb-6 flex items-center justify-between">
+                    <div
+                      className="flex size-[52px] items-center justify-center bg-[color:var(--color-brand-charcoal)] text-white transition-colors duration-300 group-hover:bg-[color:var(--color-brand-red)]"
+                      style={{
+                        clipPath: "var(--clip-chamfer-sm)",
+                      }}
+                    >
+                      <Icon className="size-6" />
+                    </div>
 
-                  <span
-                    className="bg-red-100 px-3 py-1 font-tech text-[10px] font-bold uppercase tracking-wider text-[color:var(--color-brand-red)]"
-                    style={{
-                      clipPath: "var(--clip-chamfer-sm)",
-                    }}
-                  >
-                    Modul {module.number}
-                  </span>
-                </div>
-
-                {/* Title */}
-                <h3 className="mt-7 font-racing text-2xl font-bold uppercase leading-[1.08] text-[color:var(--color-brand-charcoal)] transition-colors duration-200 group-hover:text-[color:var(--color-brand-red)]">
-                  {module.title}
-                </h3>
-
-                {/* Description */}
-                <p className="mt-4 font-body text-sm leading-relaxed text-[color:var(--color-brand-muted)]">
-                  {module.description}
-                </p>
-
-                {/* Technical Tags */}
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {module.tags.map((tag) => (
                     <span
-                      key={tag.label}
-                      className="inline-flex items-center gap-1.5 border border-slate-300 bg-white px-2.5 py-1.5 font-tech text-[10px] font-semibold text-slate-700"
+                      className="bg-red-100 px-3 py-1 font-tech text-xs font-bold uppercase tracking-wider text-[color:var(--color-brand-red)]"
                       style={{
                         clipPath: "var(--clip-chamfer-sm)",
                       }}
                     >
-                      <span className="text-[color:var(--color-brand-red)]">
-                        {tag.icon}
-                      </span>
-
-                      {tag.label}
+                      Modul {module.number}
                     </span>
-                  ))}
+                  </div>
+
+                  <h3 className="font-racing text-2xl font-bold uppercase text-[color:var(--color-brand-charcoal)] transition-colors group-hover:text-[color:var(--color-brand-red)]">
+                    {module.title}
+                  </h3>
+
+                  <p className="mb-6 mt-3 font-body text-sm leading-relaxed text-slate-600">
+                    {module.description}
+                  </p>
+
+                  <div className="mb-6 flex flex-wrap gap-2 font-tech text-xs">
+                    {module.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="border border-slate-300 bg-white px-2.5 py-1 font-semibold text-slate-700"
+                        style={{
+                          clipPath: "var(--clip-chamfer-sm)",
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Actions */}
-                <div className="mt-auto pt-8">
-                  <div className="border-t border-slate-200 pt-6">
-                    {/* Primary */}
-                    <Link
-                      href={module.href}
-                      className="group/button flex min-h-11 w-full items-center justify-between gap-3 bg-[color:var(--color-brand-charcoal)] px-5 py-3.5 font-tech text-[10px] font-bold uppercase tracking-wider text-white transition-colors duration-200 hover:bg-[color:var(--color-brand-red)]"
-                      style={{
-                        clipPath: "var(--clip-chamfer-md)",
-                      }}
-                    >
-                      <span>Pelajari Materi Lengkap</span>
+                <div className="space-y-3 border-t border-slate-200 pt-6">
+                  <Link
+                    href={module.href}
+                    className="group/module flex w-full items-center justify-between bg-[color:var(--color-brand-charcoal)] px-5 py-3.5 font-tech text-xs font-bold uppercase tracking-wider text-white shadow-sm transition-all duration-200 hover:bg-[color:var(--color-brand-red)]"
+                    style={{
+                      clipPath: "var(--clip-chamfer-sm)",
+                    }}
+                  >
+                    <span>Pelajari Materi Lengkap</span>
 
-                      <ArrowRight className="size-4 shrink-0 transition-transform duration-200 group-hover/button:translate-x-1" />
-                    </Link>
+                    <ArrowRight className="size-4 transition-transform duration-200 group-hover/module:translate-x-1" />
+                  </Link>
 
-                    {/* Laboratory */}
-                    <Link
-                      href={module.simulationHref ?? module.href}
-                      className="group/lab mt-3 flex min-h-11 w-full items-center justify-center gap-2 bg-slate-200/80 px-5 py-3.5 font-tech text-[10px] font-semibold uppercase tracking-wider text-slate-700 transition-colors duration-200 hover:bg-red-50 hover:text-[color:var(--color-brand-red)]"
-                      style={{
-                        clipPath: "var(--clip-chamfer-md)",
-                      }}
-                    >
-                      <FlaskConical className="size-3.5 shrink-0 text-[color:var(--color-brand-red)]" />
+                  <Link
+                    href={module.laboratoryHref}
+                    className="group/lab flex w-full items-center justify-center gap-2 bg-slate-200/80 px-4 py-2.5 font-tech text-xs font-semibold text-slate-700 transition-colors hover:bg-red-50 hover:text-[color:var(--color-brand-red)]"
+                    style={{
+                      clipPath: "var(--clip-chamfer-sm)",
+                    }}
+                  >
+                    <span>{module.laboratoryLabel}</span>
 
-                      <span>Buka Laboratorium Visual Interaktif</span>
-                    </Link>
-
-                    {/* Existing material/pdf access */}
-                    <a
-                      href={module.pdfHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 border border-slate-200 bg-white px-5 py-2.5 font-tech text-[9px] font-medium uppercase tracking-wider text-slate-500 transition-colors duration-200 hover:border-slate-300 hover:text-slate-700"
-                      style={{
-                        clipPath: "var(--clip-chamfer-sm)",
-                      }}
-                    >
-                      <FileText className="size-3.5 shrink-0" />
-                      <span>{module.materialLabel}</span>
-                    </a>
-                  </div>
+                    <ExternalLink className="size-3 transition-transform duration-200 group-hover/lab:translate-x-0.5 group-hover/lab:-translate-y-0.5" />
+                  </Link>
                 </div>
               </article>
             );

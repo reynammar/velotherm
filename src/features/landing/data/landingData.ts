@@ -1,15 +1,23 @@
+import type { ComponentType } from "react";
+import {
+  BatteryCharging,
+  Bolt,
+  Box,
+  RotateCcw,
+  Scale,
+  Thermometer,
+} from "lucide-react";
+
 export type LandingModule = {
   number: string;
   title: string;
   description: string;
-  tags: {
-    label: string;
-    icon: string;
-  }[];
+  tags: string[];
   href: string;
+  laboratoryHref: string;
+  laboratoryLabel: string;
   pdfHref: string;
-  simulationLabel: string;
-  materialLabel: string;
+  Icon: ComponentType<{ className?: string }>;
 };
 
 export type LandingStat = {
@@ -21,63 +29,39 @@ export type LandingStat = {
 export const landingModules: LandingModule[] = [
   {
     number: "01",
-    title: "Thermodynamics Fundamentals",
+    title: "Fondasi Termodinamika Teknik",
     description:
-      "Explore the foundations of thermodynamic systems, properties, state, process, pressure, temperature, energy, and system boundaries.",
-    tags: [
-      {
-        label: "System & Boundary",
-        icon: "◫",
-      },
-      {
-        label: "T(K) & Pabs",
-        icon: "◌",
-      },
-    ],
-    href: "/module/1",
-    pdfHref: "/pdf/modul-01.pdf",
-    simulationLabel: "Open Interactive Lab",
-    materialLabel: "View Module",
+      "Membahas paradigma makroskopis vs mikroskopis, batas sistem (tertutup, terisolasi, volume atur), matriks properti ekstensif vs intensif, serta skala temperatur mutlak.",
+    tags: ["Sistem & Boundary", "T(K) & P_abs"],
+    href: "/materi/1",
+    laboratoryHref: "/module/1",
+    laboratoryLabel: "Buka Laboratorium Visual Interaktif",
+    pdfHref: "/pdf/modul-1.pdf",
+    Icon: Box,
   },
   {
     number: "02",
-    title: "Energy, Work & The First Law",
+    title: "Energi, Kerja & Hukum I",
     description:
-      "Study kinetic, potential, and internal energy, boundary work, p-V processes, heat transfer, and the First Law of Thermodynamics.",
-    tags: [
-      {
-        label: "W = ∫ p dV",
-        icon: "⌁",
-      },
-      {
-        label: "ΔE = Q − W",
-        icon: "◈",
-      },
-    ],
-    href: "/module/2",
-    pdfHref: "/pdf/modul-02.pdf",
-    simulationLabel: "Open Interactive Lab",
-    materialLabel: "View Module",
+      "Mempelajari spektrum energi kinetik, potensial, dan internal (U), perumusan kerja batas silinder (∫ p dV), 3 persamaan proses politropik, dan neraca energi sistem.",
+    tags: ["W = ∫ p dV", "ΔE = Q - W"],
+    href: "/materi/2",
+    laboratoryHref: "/module/2",
+    laboratoryLabel: "Buka Laboratorium Visual Interaktif",
+    pdfHref: "/pdf/modul-2.pdf",
+    Icon: Bolt,
   },
   {
     number: "03",
-    title: "Thermodynamic Cycles & Hybrid",
+    title: "Siklus & Teknologi Hybrid",
     description:
-      "Explore thermodynamic cycles, efficiency, regenerative braking, hybrid energy conversion, and vehicle engineering applications.",
-    tags: [
-      {
-        label: "ΔEcycle = 0",
-        icon: "↻",
-      },
-      {
-        label: "Regenerative Braking",
-        icon: "⌁",
-      },
-    ],
-    href: "/module/3",
-    pdfHref: "/pdf/modul-03.pdf",
-    simulationLabel: "Open Interactive Lab",
-    materialLabel: "View Module",
+      "Analisis siklus daya berulang, efisiensi termal (η), dan penerapan rem regeneratif otomotif dalam membalik batas termal untuk memanen energi kinetik ke baterai.",
+    tags: ["ΔE_siklus = 0", "Rem Regeneratif"],
+    href: "/materi/3",
+    laboratoryHref: "/module/3",
+    laboratoryLabel: "Buka Laboratorium Visual Interaktif",
+    pdfHref: "/pdf/modul-3.pdf",
+    Icon: BatteryCharging,
   },
 ];
 
@@ -103,3 +87,11 @@ export const landingStats: LandingStat[] = [
     description: "Visualisasi 3D interaktif berbasis web",
   },
 ];
+
+export const moduleTechnicalIcons = {
+  system: Box,
+  energy: Bolt,
+  cycle: RotateCcw,
+  pressure: Scale,
+  temperature: Thermometer,
+};
