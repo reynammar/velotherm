@@ -35,8 +35,25 @@ import {
   type CarNodeRegistry,
 } from "@/src/lib/three/nodeRegistry";
 
-const MODEL_PATH =
-  "/models/velotherm-master.glb";
+import {
+  CAR_MODEL_PATH,
+} from "@/src/lib/three/modelConfig";
+
+import {
+  useCarBodyInteraction,
+} from "@/src/features/simulation/hooks/useCarBodyInteraction";
+
+import type {
+  BodyInteractionKey,
+} from "@/src/features/simulation/data/bodyInteractionConfig";
+
+import {
+  CarBodyInteractionMarkers,
+} from "./CarBodyInteractionMarkers";
+
+import {
+  SteeringWheelInteraction,
+} from "./SteeringWheelInteraction";
 
 export type CarFocusComponent =
   | "engine"
@@ -90,8 +107,12 @@ type VisualRole =
 
 type EngineInteractionMarkerProps = {
   target: Object3D;
-  component: EngineInternalComponent;
+
+  component:
+    EngineInternalComponent;
+
   selected: boolean;
+
   onSelect: (
     component: CarFocusComponent,
   ) => void;
@@ -99,6 +120,7 @@ type EngineInteractionMarkerProps = {
 
 const ENGINE_MARKERS: Array<{
   component: EngineInternalComponent;
+
   label: string;
 }> = [
   {
@@ -138,38 +160,6 @@ const ENGINE_MARKERS: Array<{
     label: "Crankshaft",
   },
 ];
-
-const ENGINE_NODE_NAMES: Record<
-  EngineInternalComponent,
-  string
-> = {
-  piston1:
-    "AR_ENGINE_PISTON_1_SLIDER",
-
-  rod1:
-    "AR_ENGINE_ROD_1_PIVOT",
-
-  piston2:
-    "AR_ENGINE_PISTON_2_SLIDER",
-
-  rod2:
-    "AR_ENGINE_ROD_2_PIVOT",
-
-  piston3:
-    "AR_ENGINE_PISTON_3_SLIDER",
-
-  rod3:
-    "AR_ENGINE_ROD_3_PIVOT",
-
-  piston4:
-    "AR_ENGINE_PISTON_4_SLIDER",
-
-  rod4:
-    "AR_ENGINE_ROD_4_PIVOT",
-
-  crankshaft:
-    "AR_ENGINE_CRANKSHAFT_PIVOT",
-};
 
 function cloneMaterial(
   material: Material,
@@ -272,7 +262,9 @@ function collectHierarchy(
 
   root.traverse(
     (object) => {
-      objects.add(object);
+      objects.add(
+        object,
+      );
     },
   );
 
@@ -1074,13 +1066,6 @@ function EngineInteractionMarker({
         lockZ={false}
       >
         <group>
-          {/* =================================================
-              LARGE INVISIBLE HIT AREA
-
-              This makes small piston / rod markers
-              much easier to click.
-          ================================================= */}
-
           <mesh
             onClick={
               handleClick
@@ -1106,10 +1091,6 @@ function EngineInteractionMarker({
               depthWrite={false}
             />
           </mesh>
-
-          {/* =================================================
-              VISIBLE MARKER
-          ================================================= */}
 
           <mesh
             onClick={
@@ -1146,10 +1127,6 @@ function EngineInteractionMarker({
               depthWrite={false}
             />
           </mesh>
-
-          {/* =================================================
-              CENTER DOT
-          ================================================= */}
 
           <mesh
             onClick={
@@ -1252,6 +1229,168 @@ function EngineInteractionMarkers({
   );
 }
 
+type DoorInteractionKey = Extract<
+  BodyInteractionKey,
+  "doorFL" | "doorFR" | "doorRL" | "doorRR"
+>;
+
+export type DoorCameraPose = {
+  door: DoorInteractionKey;
+
+  position: [
+    number,
+    number,
+    number,
+  ];
+
+  target: [
+    number,
+    number,
+    number,
+  ];
+};
+
+const DOOR_NODE_NAMES: Record<
+  DoorInteractionKey,
+  string
+> = {
+  doorFL: "car_door_FL",
+  doorFR: "car_door_FR",
+  doorRL: "car_door_RL",
+  doorRR: "car_door_RR",
+};
+
+function createDoorCameraPose(
+  scene: Object3D,
+  door: DoorInteractionKey,
+): DoorCameraPose | null {
+  const body =
+    scene.getObjectByName(
+      "car_body",
+    );
+
+  const doorNode =
+    scene.getObjectByName(
+      DOOR_NODE_NAMES[door],
+    );
+
+  if (!body || !doorNode) {
+    console.warn(
+      `[VELOTHERM] Door camera nodes missing for ${door}.`,
+    );
+
+    return null;
+  }
+
+  scene.updateWorldMatrix(
+    true,
+    true,
+  );
+
+  const bodyBounds =
+    new Box3().setFromObject(
+      body,
+    );
+
+  const doorBounds =
+    new Box3().setFromObject(
+      doorNode,
+    );
+
+  if (
+    bodyBounds.isEmpty() ||
+    doorBounds.isEmpty()
+  ) {
+    console.warn(
+      `[VELOTHERM] Failed to calculate door camera bounds for ${door}.`,
+    );
+
+    return null;
+  }
+
+  const bodyCenter =
+    bodyBounds.getCenter(
+      new Vector3(),
+    );
+
+  const bodySize =
+    bodyBounds.getSize(
+      new Vector3(),
+    );
+
+  const doorCenter =
+    doorBounds.getCenter(
+      new Vector3(),
+    );
+
+  const sideSign =
+    doorCenter.x >=
+    bodyCenter.x
+      ? 1
+      : -1;
+
+  const outwardSign =
+    sideSign;
+
+  const cabinHeight =
+    bodyBounds.min.y +
+    bodySize.y * 0.56;
+
+  const cameraDepth =
+    Math.max(
+      bodySize.x * 0.22,
+      0.6,
+    );
+
+  const cameraZ =
+    doorCenter.z +
+    (bodyCenter.z -
+      doorCenter.z) *
+      0.04;
+
+  const targetZ =
+    doorCenter.z +
+    (bodyCenter.z -
+      doorCenter.z) *
+      0.68;
+
+  const position =
+    new Vector3(
+      doorCenter.x +
+        outwardSign *
+          cameraDepth,
+      cabinHeight,
+      cameraZ,
+    );
+
+  const target =
+    new Vector3(
+      bodyCenter.x -
+        outwardSign *
+          bodySize.x *
+          0.04,
+      bodyBounds.min.y +
+        bodySize.y * 0.48,
+      targetZ,
+    );
+
+  return {
+    door,
+
+    position: [
+      position.x,
+      position.y,
+      position.z,
+    ],
+
+    target: [
+      target.x,
+      target.y,
+      target.z,
+    ],
+  };
+}
+
 export type CarModelProps = {
   onNodesReady?: (
     nodes: CarNodeRegistry,
@@ -1259,6 +1398,10 @@ export type CarModelProps = {
 
   onNodeSelect?: (
     component: CarFocusComponent,
+  ) => void;
+
+  onDoorCameraChange?: (
+    pose: DoorCameraPose | null,
   ) => void;
 
   engineFocus?: boolean;
@@ -1271,13 +1414,16 @@ export type CarModelProps = {
 export function CarModel({
   onNodesReady,
   onNodeSelect,
+  onDoorCameraChange,
   engineFocus = false,
   focusComponent = null,
 }: CarModelProps) {
   const {
     scene,
     animations,
-  } = useGLTF(MODEL_PATH);
+  } = useGLTF(
+    CAR_MODEL_PATH,
+  );
 
   const nodes = useMemo(
     () =>
@@ -1286,6 +1432,68 @@ export function CarModel({
       ),
     [scene],
   );
+
+  const activeDoorRef =
+    useRef<DoorInteractionKey | null>(
+      null,
+    );
+
+  const handleBodyInteractionChange =
+    useCallback(
+      (
+        key: BodyInteractionKey,
+        open: boolean,
+      ) => {
+        const isDoor =
+          key === "doorFL" ||
+          key === "doorFR" ||
+          key === "doorRL" ||
+          key === "doorRR";
+
+        if (!isDoor) {
+          return;
+        }
+
+        if (!open) {
+          if (
+            activeDoorRef.current ===
+            key
+          ) {
+            activeDoorRef.current = null;
+            onDoorCameraChange?.(
+              null,
+            );
+          }
+
+          return;
+        }
+
+        activeDoorRef.current = key;
+
+        const pose =
+          createDoorCameraPose(
+            scene,
+            key,
+          );
+
+        onDoorCameraChange?.(
+          pose,
+        );
+      },
+      [
+        onDoorCameraChange,
+        scene,
+      ],
+    );
+
+  const {
+    toggleInteraction,
+    openStates,
+  } =
+    useCarBodyInteraction(
+      scene,
+      handleBodyInteractionChange,
+    );
 
   const originalMaterialsRef =
     useRef<OriginalMaterialMap>(
@@ -1344,6 +1552,11 @@ export function CarModel({
   useEffect(() => {
     console.log(
       "[VELOTHERM] Car model loaded",
+    );
+
+    console.log(
+      "[VELOTHERM] Model path:",
+      CAR_MODEL_PATH,
     );
 
     console.log(
@@ -1470,6 +1683,24 @@ export function CarModel({
         }
       />
 
+      <CarBodyInteractionMarkers
+        scene={
+          scene
+        }
+        openStates={
+          openStates
+        }
+        onInteract={
+          toggleInteraction
+        }
+      />
+
+      <SteeringWheelInteraction
+        scene={
+          scene
+        }
+      />
+
       <EngineInteractionMarkers
         nodes={nodes}
         visible={
@@ -1487,5 +1718,5 @@ export function CarModel({
 }
 
 useGLTF.preload(
-  MODEL_PATH,
+  CAR_MODEL_PATH,
 );

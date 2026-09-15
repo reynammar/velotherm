@@ -31,6 +31,7 @@ import {
 import {
   CarModel,
   type CarFocusComponent,
+  type DoorCameraPose,
 } from "@/src/features/simulation/components/CarModel";
 
 import {
@@ -91,6 +92,292 @@ type WorldAnchorProps = {
 
   children: ReactNode;
 };
+
+type DoorCameraControllerProps = {
+  pose: DoorCameraPose | null;
+
+  controlsRef: ControlsRef;
+};
+
+function DoorCameraController({
+  pose,
+  controlsRef,
+}: DoorCameraControllerProps) {
+  const { camera } =
+    useThree();
+
+  const previousActiveRef =
+    useRef(false);
+
+  const previousPoseRef =
+    useRef<DoorCameraPose | null>(
+      null,
+    );
+
+  const startCameraRef =
+    useRef(new Vector3());
+
+  const endCameraRef =
+    useRef(new Vector3());
+
+  const startTargetRef =
+    useRef(new Vector3());
+
+  const endTargetRef =
+    useRef(new Vector3());
+
+  const restoreCameraRef =
+    useRef(new Vector3());
+
+  const restoreTargetRef =
+    useRef(new Vector3());
+
+  const originalMinDistanceRef =
+    useRef<number | null>(
+      null,
+    );
+
+  const transitionStartRef =
+    useRef<number | null>(
+      null,
+    );
+
+  const transitioningRef =
+    useRef(false);
+
+  useEffect(() => {
+    const controls =
+      controlsRef.current;
+
+    if (!controls) {
+      return;
+    }
+
+    const active =
+      pose !== null;
+
+    const previousActive =
+      previousActiveRef.current;
+
+    const poseChanged =
+      previousPoseRef.current !==
+      pose;
+
+    const entering =
+      !previousActive &&
+      active;
+
+    const leaving =
+      previousActive &&
+      !active;
+
+    if (
+      active &&
+      pose &&
+      (entering ||
+        poseChanged)
+    ) {
+      startCameraRef.current.copy(
+        camera.position,
+      );
+
+      startTargetRef.current.copy(
+        controls.target,
+      );
+
+      if (entering) {
+        restoreCameraRef.current.copy(
+          camera.position,
+        );
+
+        restoreTargetRef.current.copy(
+          controls.target,
+        );
+
+        originalMinDistanceRef.current =
+          controls.minDistance;
+      }
+
+      endCameraRef.current.set(
+        pose.position[0],
+        pose.position[1],
+        pose.position[2],
+      );
+
+      endTargetRef.current.set(
+        pose.target[0],
+        pose.target[1],
+        pose.target[2],
+      );
+
+      controls.minDistance =
+        Math.min(
+          controls.minDistance,
+          0.45,
+        );
+
+      controls.enabled =
+        false;
+
+      transitionStartRef.current =
+        performance.now();
+
+      transitioningRef.current =
+        true;
+    }
+
+    if (leaving) {
+      startCameraRef.current.copy(
+        camera.position,
+      );
+
+      startTargetRef.current.copy(
+        controls.target,
+      );
+
+      endCameraRef.current.copy(
+        restoreCameraRef.current,
+      );
+
+      endTargetRef.current.copy(
+        restoreTargetRef.current,
+      );
+
+      controls.enabled =
+        false;
+
+      transitionStartRef.current =
+        performance.now();
+
+      transitioningRef.current =
+        true;
+    }
+
+    previousActiveRef.current =
+      active;
+
+    previousPoseRef.current =
+      pose;
+  }, [
+    camera,
+    controlsRef,
+    pose,
+  ]);
+
+  useFrame(() => {
+    const controls =
+      controlsRef.current;
+
+    const startTime =
+      transitionStartRef.current;
+
+    if (
+      !controls ||
+      !transitioningRef.current ||
+      startTime === null
+    ) {
+      return;
+    }
+
+    const elapsed =
+      performance.now() -
+      startTime;
+
+    const duration = 850;
+
+    const progress =
+      Math.min(
+        elapsed /
+          duration,
+        1,
+      );
+
+    const smoothProgress =
+      1 -
+      (1 -
+        progress) ** 3;
+
+    camera.position.lerpVectors(
+      startCameraRef.current,
+      endCameraRef.current,
+      smoothProgress,
+    );
+
+    controls.target.lerpVectors(
+      startTargetRef.current,
+      endTargetRef.current,
+      smoothProgress,
+    );
+
+    controls.update();
+
+    if (
+      progress >= 1
+    ) {
+      transitioningRef.current =
+        false;
+
+      transitionStartRef.current =
+        null;
+
+      const active =
+        previousActiveRef.current;
+
+      if (active) {
+        controls.enabled =
+          true;
+
+        controls.update();
+      } else {
+        const originalMinDistance =
+          originalMinDistanceRef.current;
+
+        if (
+          originalMinDistance !==
+          null
+        ) {
+          controls.minDistance =
+            originalMinDistance;
+
+          originalMinDistanceRef.current =
+            null;
+        }
+
+        controls.enabled =
+          true;
+
+        controls.update();
+      }
+    }
+  });
+
+  useEffect(() => {
+    return () => {
+      const controls =
+        controlsRef.current;
+
+      if (!controls) {
+        return;
+      }
+
+      if (
+        originalMinDistanceRef.current !==
+        null
+      ) {
+        controls.minDistance =
+          originalMinDistanceRef.current;
+        originalMinDistanceRef.current =
+          null;
+      }
+
+      controls.enabled =
+        true;
+    };
+  }, [controlsRef]);
+
+  return null;
+}
+
 
 export type SimulationCanvasProps = {
   angularVelocity?: number;
@@ -688,6 +975,14 @@ export function SimulationCanvas({
       null,
     );
 
+  const [
+    doorCameraPose,
+    setDoorCameraPose,
+  ] =
+    useState<DoorCameraPose | null>(
+      null,
+    );
+
   const controlsRef =
     useRef<
       ComponentRef<
@@ -702,6 +997,18 @@ export function SimulationCanvas({
       ) => {
         setCarNodes(
           nodes,
+        );
+      },
+      [],
+    );
+
+  const handleDoorCameraChange =
+    useCallback(
+      (
+        pose: DoorCameraPose | null,
+      ) => {
+        setDoorCameraPose(
+          pose,
         );
       },
       [],
@@ -822,6 +1129,9 @@ export function SimulationCanvas({
               }
               onNodeSelect={
                 onNodeSelect
+              }
+              onDoorCameraChange={
+                handleDoorCameraChange
               }
             />
           </group>
@@ -965,6 +1275,16 @@ export function SimulationCanvas({
           }
           focusCameraOffset={
             focusCameraOffset
+          }
+        />
+        <DoorCameraController
+          pose={
+            cameraFocus === null
+              ? doorCameraPose
+              : null
+          }
+          controlsRef={
+            controlsRef
           }
         />
       </Canvas>

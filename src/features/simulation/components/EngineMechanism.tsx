@@ -29,12 +29,13 @@ import {
   CAR_NODE_NAMES,
 } from "@/src/lib/three/nodeRegistry";
 
+import {
+  CAR_MODEL_PATH,
+} from "@/src/lib/three/modelConfig";
+
 import type {
   CarFocusComponent,
 } from "@/src/features/simulation/components/CarModel";
-
-const MODEL_PATH =
-  "/models/velotherm-master.glb";
 
 type EngineMechanismProps = {
   isPlaying: boolean;
@@ -43,32 +44,12 @@ type EngineMechanismProps = {
 
   resetKey?: number;
 
-  /**
-   * Normalized animation position:
-   * 0 → 1
-   *
-   * Used only when the engine is paused
-   * so the user can manually scrub the
-   * authored engine animation.
-   */
   cycleProgress?:
     | number
     | null;
 
-  /**
-   * Kept for compatibility with the current
-   * Scene 09 implementation.
-   *
-   * The current animation controller no longer
-   * needs to use this value directly.
-   */
   startProgress?: number;
 
-  /**
-   * Draws relationship lines between:
-   *
-   * piston → rod → crankshaft
-   */
   showTrace?: boolean;
 
   selectedComponent?:
@@ -261,12 +242,6 @@ function EngineTrace({
     return position;
   };
 
-  /**
-   * Crankshaft selected:
-   *
-   * show all piston → rod → crankshaft
-   * relationships.
-   */
   if (
     selected ===
     "crankshaft"
@@ -406,7 +381,9 @@ export function EngineMechanism({
   const {
     scene,
     animations,
-  } = useGLTF(MODEL_PATH);
+  } = useGLTF(
+    CAR_MODEL_PATH,
+  );
 
   const {
     actions,
@@ -422,9 +399,6 @@ export function EngineMechanism({
         .engineFourStroke
     ];
 
-  /**
-   * INITIALIZE ENGINE ACTION
-   */
   useEffect(() => {
     if (!engineAction) {
       console.error(
@@ -443,11 +417,6 @@ export function EngineMechanism({
       1,
     );
 
-    /**
-     * Start from the beginning,
-     * but remain paused until
-     * the user runs the engine.
-     */
     engineAction.stop();
 
     engineAction.reset();
@@ -467,14 +436,6 @@ export function EngineMechanism({
     engineAction,
   ]);
 
-  /**
-   * PLAYBACK RATE
-   *
-   * Only update the action speed while
-   * the engine is actually running.
-   *
-   * When paused, timeScale remains 0.
-   */
   useEffect(() => {
     if (
       !engineAction ||
@@ -492,26 +453,6 @@ export function EngineMechanism({
     playbackRate,
   ]);
 
-  /**
-   * PLAY / PAUSE
-   *
-   * IMPORTANT:
-   *
-   * We intentionally do NOT use:
-   *
-   * engineAction.paused = ...
-   *
-   * because AnimationAction is returned
-   * from a React hook and direct mutation
-   * violates React's immutability rule.
-   *
-   * Instead:
-   *
-   * play  → timeScale > 0
-   * pause → timeScale = 0
-   *
-   * This keeps the current animation position.
-   */
   useEffect(() => {
     if (!engineAction) {
       return;
@@ -529,12 +470,6 @@ export function EngineMechanism({
       return;
     }
 
-    /**
-     * Pause in-place.
-     *
-     * Do NOT stop().
-     * stop() would reset the animation.
-     */
     engineAction.setEffectiveTimeScale(
       0,
     );
@@ -544,17 +479,6 @@ export function EngineMechanism({
     playbackRate,
   ]);
 
-  /**
-   * MANUAL SCRUB
-   *
-   * Runs only while paused.
-   *
-   * Instead of:
-   *
-   * engineAction.time = ...
-   *
-   * we use AnimationMixer.setTime().
-   */
   useEffect(() => {
     if (
       !engineAction ||
@@ -581,10 +505,6 @@ export function EngineMechanism({
         0.999999,
       );
 
-    /**
-     * Make sure the action is active
-     * before moving the mixer timeline.
-     */
     engineAction
       .reset()
       .play();
@@ -594,10 +514,6 @@ export function EngineMechanism({
         safeProgress,
     );
 
-    /**
-     * Freeze exactly at the scrubbed
-     * position.
-     */
     engineAction.setEffectiveTimeScale(
       0,
     );
@@ -654,5 +570,5 @@ export function EngineMechanism({
 }
 
 useGLTF.preload(
-  MODEL_PATH,
+  CAR_MODEL_PATH,
 );
