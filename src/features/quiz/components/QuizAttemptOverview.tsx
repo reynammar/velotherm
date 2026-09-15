@@ -2,22 +2,27 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, Clock3, Flag, Play, RotateCcw, ShieldCheck, TimerReset } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  Flag,
+  Play,
+  RotateCcw,
+  ShieldCheck,
+  TimerReset,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Navbar } from "@/src/shared/components/Navbar";
-import {
-  quizQuestions,
-  type QuizModuleId,
-} from "@/src/features/quiz/data/quizQuestions";
+import { quizQuestions } from "@/src/features/quiz/data/quizQuestions";
 
 const QUIZ_DURATION_SECONDS = 30 * 60;
-const STORAGE_PREFIX = "velotherm-quiz-attempt";
+const STORAGE_KEY = "velotherm-thermodynamics-quiz-attempt";
 
 type AttemptStatus = "in-progress" | "completed";
 
 type StoredAttempt = {
-  moduleId: QuizModuleId;
   answers: Array<number | null>;
   flaggedQuestions: boolean[];
   startedAt: number;
@@ -26,49 +31,16 @@ type StoredAttempt = {
   completedAt?: number;
 };
 
-const MODULE_META: Record<
-  QuizModuleId,
-  {
-    label: string;
-    title: string;
-    description: string;
-  }
-> = {
-  "1": {
-    label: "MODUL 01",
-    title: "Fondasi Termodinamika Teknik",
-    description:
-      "Uji pemahaman tentang sistem, boundary, properties, state, tekanan absolut, temperatur absolut, serta konsep dasar termodinamika teknik.",
-  },
-  "2": {
-    label: "MODUL 02",
-    title: "Energi, Kerja & Hukum I Termodinamika",
-    description:
-      "Uji pemahaman tentang energi total, boundary work, proses politropik, perpindahan kalor, dan neraca energi Hukum I.",
-  },
-  "3": {
-    label: "MODUL 03",
-    title: "Siklus Termodinamika & Kendaraan Hybrid",
-    description:
-      "Uji pemahaman tentang siklus, efisiensi, energi kinetik, regenerative braking, aerodynamic drag, lightweighting, dan aliran energi hybrid.",
-  },
-};
-
-function getStorageKey(moduleId: QuizModuleId) {
-  return `${STORAGE_PREFIX}-${moduleId}`;
-}
-
-function readAttempt(moduleId: QuizModuleId): StoredAttempt | null {
+function readAttempt(): StoredAttempt | null {
   if (typeof window === "undefined") return null;
 
   try {
-    const raw = window.localStorage.getItem(getStorageKey(moduleId));
+    const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as StoredAttempt;
 
     if (
-      parsed.moduleId !== moduleId ||
       !Array.isArray(parsed.answers) ||
       !Array.isArray(parsed.flaggedQuestions) ||
       typeof parsed.startedAt !== "number" ||
@@ -84,16 +56,12 @@ function readAttempt(moduleId: QuizModuleId): StoredAttempt | null {
   }
 }
 
-function createFreshAttempt(moduleId: QuizModuleId): StoredAttempt {
+function createFreshAttempt(): StoredAttempt {
   const now = Date.now();
-  const totalQuestions = quizQuestions.filter(
-    (question) => question.moduleId === moduleId,
-  ).length;
 
   return {
-    moduleId,
-    answers: new Array(totalQuestions).fill(null),
-    flaggedQuestions: new Array(totalQuestions).fill(false),
+    answers: new Array(quizQuestions.length).fill(null),
+    flaggedQuestions: new Array(quizQuestions.length).fill(false),
     startedAt: now,
     expiresAt: now + QUIZ_DURATION_SECONDS * 1000,
     status: "in-progress",
@@ -101,14 +69,11 @@ function createFreshAttempt(moduleId: QuizModuleId): StoredAttempt {
 }
 
 function persistAttempt(attempt: StoredAttempt) {
-  window.localStorage.setItem(
-    getStorageKey(attempt.moduleId),
-    JSON.stringify(attempt),
-  );
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(attempt));
 }
 
-function clearAttempt(moduleId: QuizModuleId) {
-  window.localStorage.removeItem(getStorageKey(moduleId));
+function clearAttempt() {
+  window.localStorage.removeItem(STORAGE_KEY);
 }
 
 function formatTime(seconds: number) {
@@ -119,17 +84,13 @@ function formatTime(seconds: number) {
   return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 }
 
-function calculateScore(moduleId: QuizModuleId, answers: Array<number | null>) {
-  const questions = quizQuestions.filter(
-    (question) => question.moduleId === moduleId,
-  );
-
-  const correct = questions.reduce((count, question, index) => {
+function calculateScore(answers: Array<number | null>) {
+  const correct = quizQuestions.reduce((count, question, index) => {
     return count + (answers[index] === question.correct ? 1 : 0);
   }, 0);
 
-  return questions.length
-    ? Math.round((correct / questions.length) * 100)
+  return quizQuestions.length
+    ? Math.round((correct / quizQuestions.length) * 100)
     : 0;
 }
 
@@ -140,20 +101,15 @@ function getStatusLabel(score: number) {
   return "D · Perlu Remediasi";
 }
 
-export function QuizAttemptOverview({ moduleId }: { moduleId: QuizModuleId }) {
-  const meta = MODULE_META[moduleId];
-  const questions = useMemo(
-    () => quizQuestions.filter((question) => question.moduleId === moduleId),
-    [moduleId],
-  );
-
+export function QuizAttemptOverview() {
+  const questions = useMemo(() => quizQuestions, []);
   const [hydrated, setHydrated] = useState(false);
   const [attempt, setAttempt] = useState<StoredAttempt | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
-      const savedAttempt = readAttempt(moduleId);
+      const savedAttempt = readAttempt();
 
       if (savedAttempt?.status === "in-progress") {
         const remaining = Math.max(
@@ -191,7 +147,7 @@ export function QuizAttemptOverview({ moduleId }: { moduleId: QuizModuleId }) {
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [moduleId]);
+  }, []);
 
   useEffect(() => {
     if (!attempt || attempt.status !== "in-progress") return;
@@ -220,20 +176,21 @@ export function QuizAttemptOverview({ moduleId }: { moduleId: QuizModuleId }) {
     return () => window.clearInterval(intervalId);
   }, [attempt]);
 
-  const answeredCount = attempt?.answers.filter((answer) => answer !== null).length ?? 0;
-  const flaggedCount = attempt?.flaggedQuestions.filter(Boolean).length ?? 0;
-  const score = attempt?.status === "completed"
-    ? calculateScore(moduleId, attempt.answers)
-    : null;
+  const answeredCount =
+    attempt?.answers.filter((answer) => answer !== null).length ?? 0;
+  const flaggedCount =
+    attempt?.flaggedQuestions.filter(Boolean).length ?? 0;
+  const score =
+    attempt?.status === "completed" ? calculateScore(attempt.answers) : null;
 
   const startFreshQuiz = () => {
-    const freshAttempt = createFreshAttempt(moduleId);
+    const freshAttempt = createFreshAttempt();
     persistAttempt(freshAttempt);
-    window.location.href = `/quiz/attempt/${moduleId}/start`;
+    window.location.href = "/quiz/attempt/start";
   };
 
   const restartQuiz = () => {
-    clearAttempt(moduleId);
+    clearAttempt();
     startFreshQuiz();
   };
 
@@ -247,7 +204,7 @@ export function QuizAttemptOverview({ moduleId }: { moduleId: QuizModuleId }) {
               CBT Evaluation
             </p>
             <h1 className="mt-2 font-[var(--font-oswald)] text-2xl font-bold uppercase text-[color:var(--color-brand-charcoal)]">
-              Menyiapkan sesi {meta.label}
+              Menyiapkan Uji Pemahaman Termodinamika
             </h1>
           </div>
         </main>
@@ -263,14 +220,6 @@ export function QuizAttemptOverview({ moduleId }: { moduleId: QuizModuleId }) {
       <Navbar variant="quiz-selection" />
 
       <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-        <Link
-          href="/quiz"
-          className="mb-6 inline-flex items-center gap-2 font-[var(--font-chakra-petch)] text-xs font-bold uppercase tracking-wide text-slate-500 transition-colors hover:text-[color:var(--color-brand-red)]"
-        >
-          <ArrowLeft className="size-4" />
-          Kembali Pilih Modul
-        </Link>
-
         <section className="overflow-hidden border-2 border-slate-200 bg-white shadow-[var(--shadow-card)]">
           <div className="border-b border-slate-200 bg-[color:var(--color-brand-charcoal)] px-5 py-6 text-white sm:px-8 sm:py-8">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
@@ -279,13 +228,14 @@ export function QuizAttemptOverview({ moduleId }: { moduleId: QuizModuleId }) {
                   className="inline-flex border border-[color:var(--color-brand-red)]/40 bg-red-950/50 px-3 py-1 font-[var(--font-chakra-petch)] text-[10px] font-bold uppercase tracking-[0.16em] text-red-300"
                   style={{ clipPath: "var(--clip-chamfer-sm)" }}
                 >
-                  {meta.label} · CBT EVALUATION
+                  UJI PEMAHAMAN · CBT EVALUATION
                 </span>
                 <h1 className="mt-3 max-w-3xl font-[var(--font-oswald)] text-3xl font-bold uppercase tracking-wide sm:text-4xl">
-                  {meta.title}
+                  Uji Pemahaman Termodinamika
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
-                  {meta.description}
+                  Evaluasi pemahaman kamu terhadap konsep energi, kerja, kalor,
+                  energi internal, Hukum I Termodinamika, dan analisis siklus.
                 </p>
               </div>
 
@@ -317,10 +267,12 @@ export function QuizAttemptOverview({ moduleId }: { moduleId: QuizModuleId }) {
                           Sesi Kuis Sedang Berjalan
                         </p>
                         <h2 className="mt-1 font-[var(--font-oswald)] text-2xl font-bold uppercase text-emerald-950">
-                          Jangan mulai dari nol
+                          Lanjutkan pengerjaan
                         </h2>
                         <p className="mt-1 text-sm leading-relaxed text-emerald-900/70">
-                          Jawaban dan status ragu-ragu tersimpan. Lo bisa keluar dari halaman kuis dan kembali ke halaman ini untuk melanjutkan sesi.
+                          Jawaban dan status ragu-ragu tersimpan. Kamu bisa keluar
+                          dari halaman kuis dan kembali ke halaman ini untuk
+                          melanjutkan sesi.
                         </p>
                       </div>
                     </div>
@@ -337,15 +289,31 @@ export function QuizAttemptOverview({ moduleId }: { moduleId: QuizModuleId }) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <InfoCard icon={<Clock3 className="size-4" />} label="Sisa Waktu" value={formatTime(remainingSeconds)} />
-                  <InfoCard icon={<CheckCircle2 className="size-4" />} label="Terjawab" value={`${answeredCount}/${questions.length}`} />
-                  <InfoCard icon={<Flag className="size-4" />} label="Ditandai Ragu" value={String(flaggedCount)} />
-                  <InfoCard icon={<TimerReset className="size-4" />} label="Durasi Awal" value="30:00" />
+                  <InfoCard
+                    icon={<Clock3 className="size-4" />}
+                    label="Sisa Waktu"
+                    value={formatTime(remainingSeconds)}
+                  />
+                  <InfoCard
+                    icon={<CheckCircle2 className="size-4" />}
+                    label="Terjawab"
+                    value={`${answeredCount}/${questions.length}`}
+                  />
+                  <InfoCard
+                    icon={<Flag className="size-4" />}
+                    label="Ditandai Ragu"
+                    value={String(flaggedCount)}
+                  />
+                  <InfoCard
+                    icon={<TimerReset className="size-4" />}
+                    label="Durasi Awal"
+                    value="30:00"
+                  />
                 </div>
 
                 <div className="flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row">
                   <Link
-                    href={`/quiz/attempt/${moduleId}/start`}
+                    href="/quiz/attempt/start"
                     className="inline-flex flex-1 items-center justify-center gap-2 bg-[color:var(--color-brand-red)] px-5 py-3.5 font-[var(--font-chakra-petch)] text-xs font-bold uppercase tracking-[0.12em] text-white transition-all hover:bg-[color:var(--color-brand-crimson)] hover:shadow-[var(--shadow-glow-red)]"
                     style={{ clipPath: "var(--clip-chamfer-sm)" }}
                   >
@@ -376,7 +344,7 @@ export function QuizAttemptOverview({ moduleId }: { moduleId: QuizModuleId }) {
                         Evaluasi Sudah Selesai
                       </h2>
                       <p className="mt-1 text-sm text-slate-500">
-                        Skor terakhir lo dapat dilihat kembali melalui mode review.
+                        Hasil pengerjaan terakhir tersimpan di browser ini.
                       </p>
                     </div>
                     <div className="text-left sm:text-right">
@@ -395,7 +363,7 @@ export function QuizAttemptOverview({ moduleId }: { moduleId: QuizModuleId }) {
 
                 <div className="flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row">
                   <Link
-                    href={`/quiz/attempt/${moduleId}/start`}
+                    href="/quiz/attempt/start"
                     className="inline-flex flex-1 items-center justify-center gap-2 bg-[color:var(--color-brand-charcoal)] px-5 py-3.5 font-[var(--font-chakra-petch)] text-xs font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[color:var(--color-brand-red)]"
                     style={{ clipPath: "var(--clip-chamfer-sm)" }}
                   >
@@ -416,37 +384,41 @@ export function QuizAttemptOverview({ moduleId }: { moduleId: QuizModuleId }) {
             ) : (
               <div className="space-y-8">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <InfoCard icon={<Clock3 className="size-4" />} label="Durasi" value="30 Menit" />
-                  <InfoCard icon={<CheckCircle2 className="size-4" />} label="Jumlah Soal" value={`${questions.length} Soal`} />
-                  <InfoCard icon={<ShieldCheck className="size-4" />} label="Tipe" value="Pilihan Ganda" />
+                  <InfoCard
+                    icon={<Clock3 className="size-4" />}
+                    label="Durasi"
+                    value="30 Menit"
+                  />
+                  <InfoCard
+                    icon={<CheckCircle2 className="size-4" />}
+                    label="Jumlah Soal"
+                    value={`${questions.length} Soal`}
+                  />
+                  <InfoCard
+                    icon={<ShieldCheck className="size-4" />}
+                    label="Tipe"
+                    value="Pilihan Ganda"
+                  />
                 </div>
 
                 <div className="border border-slate-200 bg-slate-50 p-5 sm:p-6">
                   <div className="flex items-start gap-3">
                     <div className="flex size-9 shrink-0 items-center justify-center bg-red-50 text-[color:var(--color-brand-red)]">
-                      <TimerReset className="size-4" />
+                      <ShieldCheck className="size-4" />
                     </div>
                     <div>
-                      <h2 className="font-[var(--font-chakra-petch)] text-sm font-bold uppercase tracking-wide text-[color:var(--color-brand-charcoal)]">
-                        Perhatikan sebelum mulai
+                      <h2 className="font-[var(--font-oswald)] text-xl font-bold uppercase text-[color:var(--color-brand-charcoal)]">
+                        Sebelum mulai
                       </h2>
                       <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                        Timer dimulai saat lo menekan tombol mulai. Sesi, jawaban, dan tanda ragu akan disimpan di perangkat ini, sehingga lo bisa keluar lalu kembali ke halaman attempt tanpa kehilangan progres.
+                        Pastikan kamu siap mengerjakan seluruh 25 soal dalam satu
+                        sesi. Timer berjalan setelah tombol mulai ditekan.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
-                  <Link
-                    href="/quiz"
-                    className="inline-flex items-center justify-center gap-2 border border-slate-300 bg-white px-5 py-3.5 font-[var(--font-chakra-petch)] text-xs font-bold uppercase tracking-[0.12em] text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-900"
-                    style={{ clipPath: "var(--clip-chamfer-sm)" }}
-                  >
-                    <ArrowLeft className="size-4" />
-                    Pilih Modul Lain
-                  </Link>
-
+                <div className="flex justify-end border-t border-slate-200 pt-6">
                   <button
                     type="button"
                     onClick={startFreshQuiz}

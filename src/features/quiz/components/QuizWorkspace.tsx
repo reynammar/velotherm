@@ -16,18 +16,14 @@ import { useRouter } from "next/navigation";
 import { Navbar } from "@/src/shared/components/Navbar";
 import {
   quizQuestions,
-  type QuizModuleId,
   type QuizQuestion,
 } from "@/src/features/quiz/data/quizQuestions";
 
-type QuizWorkspaceProps = {
-  moduleId: QuizModuleId;
-};
+type QuizWorkspaceProps = Record<string, never>;
 
 type AttemptStatus = "in-progress" | "completed";
 
 type StoredAttempt = {
-  moduleId: QuizModuleId;
   answers: Array<number | null>;
   flaggedQuestions: boolean[];
   startedAt: number;
@@ -44,45 +40,17 @@ type ResultSummary = {
 };
 
 const QUIZ_DURATION_SECONDS = 30 * 60;
-const STORAGE_PREFIX = "velotherm-quiz-attempt";
+const STORAGE_KEY = "velotherm-thermodynamics-quiz-attempt";
 
-const MODULE_META: Record<
-  QuizModuleId,
-  {
-    label: string;
-    title: string;
-    shortTitle: string;
-  }
-> = {
-  "1": {
-    label: "MODUL 01",
-    title: "Fondasi Termodinamika Teknik",
-    shortTitle: "Fondasi Termodinamika",
-  },
-  "2": {
-    label: "MODUL 02",
-    title: "Energi, Kerja & Hukum I Termodinamika",
-    shortTitle: "Energi & Hukum I",
-  },
-  "3": {
-    label: "MODUL 03",
-    title: "Siklus Termodinamika & Kendaraan Hybrid",
-    shortTitle: "Siklus & Hybrid",
-  },
-};
-
-function getStorageKey(moduleId: QuizModuleId) {
-  return `${STORAGE_PREFIX}-${moduleId}`;
+function getStorageKey() {
+  return STORAGE_KEY;
 }
 
-function createFreshAttempt(moduleId: QuizModuleId): StoredAttempt {
+function createFreshAttempt(): StoredAttempt {
   const now = Date.now();
-  const totalQuestions = quizQuestions.filter(
-    (question) => question.moduleId === moduleId,
-  ).length;
+  const totalQuestions = quizQuestions.length;
 
   return {
-    moduleId,
     answers: new Array(totalQuestions).fill(null),
     flaggedQuestions: new Array(totalQuestions).fill(false),
     startedAt: now,
@@ -91,17 +59,16 @@ function createFreshAttempt(moduleId: QuizModuleId): StoredAttempt {
   };
 }
 
-function readAttempt(moduleId: QuizModuleId): StoredAttempt | null {
+function readAttempt(): StoredAttempt | null {
   if (typeof window === "undefined") return null;
 
   try {
-    const raw = window.localStorage.getItem(getStorageKey(moduleId));
+    const raw = window.localStorage.getItem(getStorageKey());
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as StoredAttempt;
 
     if (
-      parsed.moduleId !== moduleId ||
       !Array.isArray(parsed.answers) ||
       !Array.isArray(parsed.flaggedQuestions) ||
       typeof parsed.startedAt !== "number" ||
@@ -118,14 +85,11 @@ function readAttempt(moduleId: QuizModuleId): StoredAttempt | null {
 }
 
 function persistAttempt(attempt: StoredAttempt) {
-  window.localStorage.setItem(
-    getStorageKey(attempt.moduleId),
-    JSON.stringify(attempt),
-  );
+  window.localStorage.setItem(getStorageKey(), JSON.stringify(attempt));
 }
 
-function clearAttempt(moduleId: QuizModuleId) {
-  window.localStorage.removeItem(getStorageKey(moduleId));
+function clearAttempt() {
+  window.localStorage.removeItem(getStorageKey());
 }
 
 function formatTime(seconds: number) {
@@ -142,7 +106,7 @@ function getPredicate(score: number) {
       label: "A · Sangat Memuaskan",
       className: "bg-emerald-100 text-emerald-800 border-emerald-200",
       advice:
-        "Pemahaman konsep modul sudah sangat kuat. Review pembahasan tetap disarankan untuk memastikan setiap konsep dikuasai dengan konsisten.",
+        "Pemahaman konsep sudah sangat kuat. Review pembahasan tetap disarankan untuk memastikan setiap konsep dikuasai dengan konsisten.",
     };
   }
 
@@ -160,7 +124,7 @@ function getPredicate(score: number) {
       label: "C · Cukup",
       className: "bg-amber-100 text-amber-800 border-amber-200",
       advice:
-        "Pemahaman dasar sudah terbentuk, tetapi beberapa konsep utama masih perlu diperkuat melalui materi modul.",
+        "Pemahaman dasar sudah terbentuk, tetapi beberapa konsep utama masih perlu diperkuat melalui materi pembelajaran.",
     };
   }
 
@@ -168,7 +132,7 @@ function getPredicate(score: number) {
     label: "D · Perlu Remediasi",
     className: "bg-rose-100 text-rose-800 border-rose-200",
     advice:
-      "Disarankan kembali ke materi modul, lalu ulangi evaluasi setelah konsep-konsep utamanya lebih mantap.",
+      "Disarankan kembali ke materi pembelajaran, lalu ulangi evaluasi setelah konsep-konsep utamanya lebih mantap.",
   };
 }
 
@@ -205,14 +169,9 @@ function calculateResult(
   };
 }
 
-export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
+export function QuizWorkspace(_: QuizWorkspaceProps) {
   const router = useRouter();
-  const moduleMeta = MODULE_META[moduleId];
-
-  const questions = useMemo(
-    () => quizQuestions.filter((question) => question.moduleId === moduleId),
-    [moduleId],
-  );
+  const questions = useMemo(() => quizQuestions, []);
 
   const [attempt, setAttempt] = useState<StoredAttempt | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -236,10 +195,10 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
   }, [attempt, questions]);
 
   const initializeAttempt = useCallback(() => {
-    const savedAttempt = readAttempt(moduleId);
+    const savedAttempt = readAttempt();
 
     if (!savedAttempt) {
-      const freshAttempt = createFreshAttempt(moduleId);
+      const freshAttempt = createFreshAttempt();
       persistAttempt(freshAttempt);
       setAttempt(freshAttempt);
       setRemainingSeconds(QUIZ_DURATION_SECONDS);
@@ -272,11 +231,11 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
       setRemainingSeconds(0);
       setResultOpen(true);
     }
-  }, [moduleId]);
+  }, []);
 
   useEffect(() => {
     if (questions.length !== 25) {
-      router.replace("/quiz");
+      router.replace("/quiz/attempt");
       return;
     }
 
@@ -385,7 +344,7 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
   }, [attempt]);
 
   const restartQuiz = () => {
-    clearAttempt(moduleId);
+    clearAttempt();
     setCurrentQuestionIndex(0);
     setConfirmOpen(false);
     setResultOpen(false);
@@ -400,7 +359,7 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
   };
 
   const quitToAttemptOverview = () => {
-    router.push(`/quiz/attempt/${moduleId}`);
+    router.push("/quiz/attempt");
   };
 
   const timeIsWarning = remainingSeconds <= 300;
@@ -415,7 +374,7 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
               Loading CBT
             </p>
             <h1 className="mt-2 font-[var(--font-oswald)] text-2xl font-bold uppercase text-[color:var(--color-brand-charcoal)]">
-              Menyiapkan evaluasi {moduleMeta.shortTitle}
+              Menyiapkan evaluasi Uji Pemahaman Termodinamika
             </h1>
           </div>
         </div>
@@ -443,14 +402,14 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
                 className="border border-red-200 bg-red-50 px-2.5 py-1 font-[var(--font-chakra-petch)] text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--color-brand-red)]"
                 style={{ clipPath: "var(--clip-chamfer-sm)" }}
               >
-                {moduleMeta.label}
+                UJI PEMAHAMAN
               </span>
               <span className="border border-slate-200 bg-white px-2.5 py-1 font-[var(--font-jetbrains-mono)] text-[10px] font-bold text-slate-500">
                 {answeredCount}/{questions.length} TERJAWAB
               </span>
             </div>
             <h1 className="font-[var(--font-oswald)] text-2xl font-bold uppercase tracking-wide text-[color:var(--color-brand-charcoal)] sm:text-3xl">
-              {moduleMeta.title}
+              Uji Pemahaman Termodinamika
             </h1>
           </div>
 
@@ -480,7 +439,7 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
                 </span>
               </div>
               <p className="mt-1 font-[var(--font-chakra-petch)] text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                {moduleMeta.shortTitle}
+                Uji Pemahaman Termodinamika
               </p>
             </div>
 
@@ -750,7 +709,7 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
                 <span className="font-[var(--font-chakra-petch)] text-[9px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-brand-red)]">
-                  {moduleMeta.label}
+                  UJI PEMAHAMAN
                 </span>
                 <h3 className="mt-1 font-[var(--font-oswald)] text-xl font-bold uppercase text-[color:var(--color-brand-charcoal)]">
                   Daftar Nomor Soal
@@ -818,7 +777,7 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
 
             <div className="mt-5 text-center">
               <span className="font-[var(--font-chakra-petch)] text-[9px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-brand-red)]">
-                {moduleMeta.label}
+                UJI PEMAHAMAN
               </span>
               <h3 className="mt-1 font-[var(--font-oswald)] text-2xl font-bold uppercase text-[color:var(--color-brand-charcoal)]">
                 Kumpulkan Evaluasi?
@@ -879,7 +838,7 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
                 Hasil Penilaian CBT
               </h3>
               <p className="mt-1 font-[var(--font-chakra-petch)] text-[10px] uppercase tracking-[0.12em] text-slate-400">
-                {moduleMeta.title}
+                Uji Pemahaman Termodinamika
               </p>
             </div>
 
@@ -935,14 +894,6 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
                 >
                   <RotateCcw className="size-4" />
                   Ulangi Ujian
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push(`/materi/${moduleId}`)}
-                  className="inline-flex items-center justify-center gap-2 bg-[color:var(--color-brand-red)] px-5 py-3 text-xs font-bold uppercase tracking-wide text-white shadow-[var(--shadow-glow-red)]"
-                  style={{ clipPath: "var(--clip-chamfer-sm)" }}
-                >
-                  Materi Modul
                 </button>
               </div>
             </div>
