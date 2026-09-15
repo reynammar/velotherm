@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { QuizAttemptOverview } from "@/src/features/quiz/components/QuizAttemptOverview";
+import { QuizWorkspace } from "@/src/features/quiz/components/QuizWorkspace";
 import {
   quizQuestions,
   type QuizModuleId,
@@ -19,22 +19,27 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { moduleId } = await params;
+
   if (!validModuleIds.includes(moduleId as QuizModuleId)) {
     return { title: "Kuis Tidak Ditemukan | VeloTherm" };
   }
 
+  const total = quizQuestions.filter(
+    (question) => question.moduleId === moduleId,
+  ).length;
+
   return {
-    title: `Attempt Kuis Modul ${moduleId} | VeloTherm`,
-    description: `${quizQuestions.filter((question) => question.moduleId === moduleId).length} soal evaluasi termodinamika untuk Modul ${moduleId}.`,
+    title: `Pengerjaan Kuis Modul ${moduleId} | VeloTherm`,
+    description: `Sesi pengerjaan ${total} soal evaluasi Modul ${moduleId}.`,
   };
 }
 
-export default async function QuizAttemptOverviewPage({ params }: PageProps) {
+export default async function QuizAttemptStartPage({ params }: PageProps) {
   const { moduleId } = await params;
 
   if (!validModuleIds.includes(moduleId as QuizModuleId)) {
     notFound();
   }
 
-  return <QuizAttemptOverview moduleId={moduleId as QuizModuleId} />;
+  return <QuizWorkspace moduleId={moduleId as QuizModuleId} />;
 }

@@ -399,8 +399,8 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
     setCurrentQuestionIndex(0);
   };
 
-  const quitToSelection = () => {
-    router.push("/quiz");
+  const quitToAttemptOverview = () => {
+    router.push(`/quiz/attempt/${moduleId}`);
   };
 
   const timeIsWarning = remainingSeconds <= 300;
@@ -456,12 +456,12 @@ export function QuizWorkspace({ moduleId }: QuizWorkspaceProps) {
 
           <button
             type="button"
-            onClick={quitToSelection}
+            onClick={quitToAttemptOverview}
             className="hidden items-center gap-2 self-start border border-slate-300 bg-white px-4 py-2.5 font-[var(--font-chakra-petch)] text-xs font-bold uppercase tracking-wide text-slate-600 transition-colors hover:border-[color:var(--color-brand-red)] hover:text-[color:var(--color-brand-red)] lg:inline-flex"
             style={{ clipPath: "var(--clip-chamfer-sm)" }}
           >
             <ArrowLeft className="size-4" />
-            Pilih Modul
+            Simpan & Keluar
           </button>
         </div>
 
