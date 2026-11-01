@@ -23,7 +23,6 @@ import {
   Matrix4,
   Vector3,
   type Group,
-  type Mesh,
   type Object3D,
 } from "three";
 
@@ -33,66 +32,116 @@ import {
   type BodyInteractionKey,
 } from "@/src/features/simulation/data/bodyInteractionConfig";
 
-import {
-  EngineInformationMarkers,
-} from "./EngineInformationMarkers";
-
 type CarBodyInteractionMarkersProps = {
   scene: Object3D;
   openStates: Record<BodyInteractionKey, boolean>;
-  onInteract: (key: BodyInteractionKey) => void;
+  onInteract: (
+    key: BodyInteractionKey,
+  ) => void;
 };
 
-type BodyInteractionHitAreaProps = {
+type BodyInteractionMarkerProps = {
   scene: Object3D;
   config: BodyInteractionConfig;
   isOpen: boolean;
-  onInteract: (key: BodyInteractionKey) => void;
+  onInteract: (
+    key: BodyInteractionKey,
+  ) => void;
 };
 
-const HIT_AREA_PADDING = 0.075;
-const MIN_HIT_AREA_SIZE = 0.12;
+const MARKER_SURFACE_OFFSET = 0.055;
+const MARKER_HIT_RADIUS = 0.09;
 const MARKER_RING_INNER_RADIUS = 0.038;
 const MARKER_RING_OUTER_RADIUS = 0.052;
 const MARKER_CENTER_RADIUS = 0.018;
+
+const DIRECTION_EPSILON = 0.00001;
 
 function getInteractionNodes(
   scene: Object3D,
   config: BodyInteractionConfig,
 ): Object3D[] {
   return config.interactionNodes
-    .map((name) => scene.getObjectByName(name) ?? null)
+    .map(
+      (name) =>
+        scene.getObjectByName(name) ?? null,
+    )
     .filter(
-      (node): node is Object3D => Boolean(node),
+      (node): node is Object3D =>
+        Boolean(node),
     );
 }
 
-function BodyInteractionHitArea({
+function getSurfaceDistance(
+  direction: Vector3,
+  halfSize: Vector3,
+): number {
+  const distances = [
+    Math.abs(direction.x) > DIRECTION_EPSILON
+      ? halfSize.x / Math.abs(direction.x)
+      : Infinity,
+
+    Math.abs(direction.y) > DIRECTION_EPSILON
+      ? halfSize.y / Math.abs(direction.y)
+      : Infinity,
+
+    Math.abs(direction.z) > DIRECTION_EPSILON
+      ? halfSize.z / Math.abs(direction.z)
+      : Infinity,
+  ];
+
+  return Math.min(...distances);
+}
+
+function BodyInteractionMarker({
   scene,
   config,
   isOpen,
   onInteract,
-}: BodyInteractionHitAreaProps) {
-  const groupRef = useRef<Group | null>(null);
-  const hitAreaRef = useRef<Mesh | null>(null);
+}: BodyInteractionMarkerProps) {
+  const groupRef =
+    useRef<Group | null>(null);
 
-  const inverseParentMatrixRef = useRef(new Matrix4());
-  const worldBoundsRef = useRef(new Box3());
-  const localBoundsRef = useRef(new Box3());
-  const centerRef = useRef(new Vector3());
-  const sizeRef = useRef(new Vector3());
-  const cornerRef = useRef(new Vector3());
+  const worldBoundsRef =
+    useRef(new Box3());
+
+  const localSizeRef =
+    useRef(new Vector3());
+
+  const centerRef =
+    useRef(new Vector3());
+
+  const directionRef =
+    useRef(new Vector3());
+
+  const cameraPositionRef =
+    useRef(new Vector3());
+
+  const markerWorldPositionRef =
+    useRef(new Vector3());
+
+  const markerLocalPositionRef =
+    useRef(new Vector3());
+
+  const inverseParentMatrixRef =
+    useRef(new Matrix4());
 
   const nodes = useMemo(
-    () => getInteractionNodes(scene, config),
+    () =>
+      getInteractionNodes(
+        scene,
+        config,
+      ),
     [scene, config],
   );
 
-  useFrame(() => {
+  useFrame(({ camera }) => {
     const group = groupRef.current;
-    const hitArea = hitAreaRef.current;
 
-    if (!group || !hitArea || nodes.length === 0) {
+    if (
+      !group ||
+      nodes.length === 0
+    ) {
       return;
     }
 
@@ -102,10 +151,19 @@ function BodyInteractionHitArea({
       return;
     }
 
-    scene.updateWorldMatrix(true, true);
-    parent.updateWorldMatrix(true, false);
+    scene.updateWorldMatrix(
+      true,
+      true,
+    );
 
-    const worldBounds = worldBoundsRef.current;
+    parent.updateWorldMatrix(
+      true,
+      false,
+    );
+
+    const worldBounds =
+      worldBoundsRef.current;
+
     worldBounds.makeEmpty();
 
     for (const node of nodes) {
@@ -116,60 +174,94 @@ function BodyInteractionHitArea({
       return;
     }
 
+    worldBounds.getCenter(
+      centerRef.current,
+    );
+
+    worldBounds.getSize(
+      localSizeRef.current,
+    );
+
+    const halfSize = localSizeRef.current.multiplyScalar(0.5);
+
+    camera.getWorldPosition(
+      cameraPositionRef.current,
+    );
+
+    directionRef.current.subVectors(
+      cameraPositionRef.current,
+      centerRef.current,
+    );
+
+    if (
+      directionRef.current.lengthSq() <
+      DIRECTION_EPSILON
+    ) {
+      directionRef.current.set(
+        0,
+        0,
+        1,
+      );
+    }
+
+    directionRef.current.normalize();
+
+    const surfaceDistance =
+      getSurfaceDistance(
+        directionRef.current,
+        halfSize,
+      );
+
+    if (!Number.isFinite(surfaceDistance)) {
+      return;
+    }
+
+    /*
+     * Move the marker from the center of the component
+     * toward the camera until it reaches the outer surface.
+     *
+     * This keeps the marker in front of the component mesh,
+     * preventing the CarModel click handler from intercepting
+     * the marker click.
+     */
+
+    markerWorldPositionRef.current
+      .copy(centerRef.current)
+      .addScaledVector(
+        directionRef.current,
+        surfaceDistance + MARKER_SURFACE_OFFSET,
+      );
+
+    markerWorldPositionRef.current.y +=
+      config.markerVerticalOffset ?? 0;
+
+    /*
+     * Convert world coordinates into the marker parent's
+     * local coordinate system.
+     */
+
     inverseParentMatrixRef.current
       .copy(parent.matrixWorld)
       .invert();
 
-    const localBounds = localBoundsRef.current;
-    localBounds.makeEmpty();
+    markerLocalPositionRef.current.copy(
+      markerWorldPositionRef.current,
+    );
 
-    const min = worldBounds.min;
-    const max = worldBounds.max;
+    markerLocalPositionRef.current.applyMatrix4(
+      inverseParentMatrixRef.current,
+    );
 
-    const corners: Array<[number, number, number]> = [
-      [min.x, min.y, min.z],
-      [min.x, min.y, max.z],
-      [min.x, max.y, min.z],
-      [min.x, max.y, max.z],
-      [max.x, min.y, min.z],
-      [max.x, min.y, max.z],
-      [max.x, max.y, min.z],
-      [max.x, max.y, max.z],
-    ];
-
-    for (const [x, y, z] of corners) {
-      cornerRef.current
-        .set(x, y, z)
-        .applyMatrix4(inverseParentMatrixRef.current);
-
-      localBounds.expandByPoint(cornerRef.current);
-    }
-
-    localBounds.getCenter(centerRef.current);
-    localBounds.getSize(sizeRef.current);
-
-    group.position.copy(centerRef.current);
-
-    hitArea.scale.set(
-      Math.max(
-        sizeRef.current.x + HIT_AREA_PADDING,
-        MIN_HIT_AREA_SIZE,
-      ),
-      Math.max(
-        sizeRef.current.y + HIT_AREA_PADDING,
-        MIN_HIT_AREA_SIZE,
-      ),
-      Math.max(
-        sizeRef.current.z + HIT_AREA_PADDING,
-        MIN_HIT_AREA_SIZE,
-      ),
+    group.position.copy(
+      markerLocalPositionRef.current,
     );
   });
 
-  const handlePointerDown = (
-    event: ThreeEvent<PointerEvent>,
+  const handleClick = (
+    event: ThreeEvent<MouseEvent>,
   ) => {
     event.stopPropagation();
+
     onInteract(config.key);
   };
 
@@ -177,14 +269,18 @@ function BodyInteractionHitArea({
     event: ThreeEvent<PointerEvent>,
   ) => {
     event.stopPropagation();
-    document.body.style.cursor = "pointer";
+
+    document.body.style.cursor =
+      "pointer";
   };
 
   const handlePointerOut = (
     event: ThreeEvent<PointerEvent>,
   ) => {
     event.stopPropagation();
-    document.body.style.cursor = "";
+
+    document.body.style.cursor =
+      "";
   };
 
   if (nodes.length === 0) {
@@ -193,23 +289,6 @@ function BodyInteractionHitArea({
 
   return (
     <group ref={groupRef}>
-      <mesh
-        ref={hitAreaRef}
-        onPointerDown={handlePointerDown}
-        onPointerOver={handlePointerOver}
-        onPointerOut={handlePointerOut}
-      >
-        <boxGeometry args={[1, 1, 1]} />
-
-        <meshBasicMaterial
-          transparent
-          opacity={0}
-          colorWrite={false}
-          depthWrite={false}
-          side={DoubleSide}
-        />
-      </mesh>
-
       <Billboard
         follow
         lockX={false}
@@ -217,23 +296,45 @@ function BodyInteractionHitArea({
         lockZ={false}
       >
         <group renderOrder={1100}>
+          {/* ===============================================
+              INTERACTION HIT AREA
+
+              This small invisible circle is the only
+              enlarged click target around the blue dot.
+              It does not cover the door, hood, or trunk.
+          =============================================== */}
+
           <mesh
-            onPointerDown={handlePointerDown}
+            onClick={handleClick}
             onPointerOver={handlePointerOver}
             onPointerOut={handlePointerOut}
             renderOrder={1100}
           >
-            <circleGeometry args={[0.09, 24]} />
+            <circleGeometry
+              args={[
+                MARKER_HIT_RADIUS,
+                32,
+              ]}
+            />
+
             <meshBasicMaterial
               transparent
               opacity={0}
+              colorWrite={false}
               depthTest={false}
               depthWrite={false}
+              side={DoubleSide}
             />
           </mesh>
 
+          {/* ===============================================
+              BLUE INTERACTION RING
+
+              The visible ring also receives clicks.
+          =============================================== */}
+
           <mesh
-            onPointerDown={handlePointerDown}
+            onClick={handleClick}
             onPointerOver={handlePointerOver}
             onPointerOut={handlePointerOut}
             renderOrder={1101}
@@ -245,26 +346,45 @@ function BodyInteractionHitArea({
                 28,
               ]}
             />
+
             <meshBasicMaterial
-              color={isOpen ? "#93c5fd" : "#3b82f6"}
+              color={
+                isOpen
+                  ? "#93c5fd"
+                  : "#3b82f6"
+              }
               transparent
               opacity={0.98}
               depthTest={false}
               depthWrite={false}
+              side={DoubleSide}
             />
           </mesh>
 
+          {/* ===============================================
+              BLUE INTERACTION CENTER
+
+              The center receives clicks as well.
+          =============================================== */}
+
           <mesh
-            onPointerDown={handlePointerDown}
+            onClick={handleClick}
             onPointerOver={handlePointerOver}
             onPointerOut={handlePointerOut}
             renderOrder={1102}
           >
-            <circleGeometry args={[MARKER_CENTER_RADIUS, 16]} />
+            <circleGeometry
+              args={[
+                MARKER_CENTER_RADIUS,
+                16,
+              ]}
+            />
+
             <meshBasicMaterial
               color="#dbeafe"
               depthTest={false}
               depthWrite={false}
+              side={DoubleSide}
             />
           </mesh>
         </group>
@@ -280,17 +400,19 @@ export function CarBodyInteractionMarkers({
 }: CarBodyInteractionMarkersProps) {
   return (
     <group>
-      {BODY_INTERACTION_CONFIGS.map((config) => (
-        <BodyInteractionHitArea
-          key={config.key}
-          scene={scene}
-          config={config}
-          isOpen={openStates[config.key]}
-          onInteract={onInteract}
-        />
-      ))}
-
-      <EngineInformationMarkers scene={scene} />
+      {BODY_INTERACTION_CONFIGS.map(
+        (config) => (
+          <BodyInteractionMarker
+            key={config.key}
+            scene={scene}
+            config={config}
+            isOpen={
+              openStates[config.key]
+            }
+            onInteract={onInteract}
+          />
+        ),
+      )}
     </group>
   );
 }
