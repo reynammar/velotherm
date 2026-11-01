@@ -6,6 +6,10 @@ import {
 } from "react";
 
 import {
+  Billboard,
+} from "@react-three/drei";
+
+import {
   useFrame,
 } from "@react-three/fiber";
 
@@ -29,6 +33,10 @@ import {
   type BodyInteractionKey,
 } from "@/src/features/simulation/data/bodyInteractionConfig";
 
+import {
+  EngineInformationMarkers,
+} from "./EngineInformationMarkers";
+
 type CarBodyInteractionMarkersProps = {
   scene: Object3D;
   openStates: Record<BodyInteractionKey, boolean>;
@@ -38,11 +46,15 @@ type CarBodyInteractionMarkersProps = {
 type BodyInteractionHitAreaProps = {
   scene: Object3D;
   config: BodyInteractionConfig;
+  isOpen: boolean;
   onInteract: (key: BodyInteractionKey) => void;
 };
 
 const HIT_AREA_PADDING = 0.075;
 const MIN_HIT_AREA_SIZE = 0.12;
+const MARKER_RING_INNER_RADIUS = 0.038;
+const MARKER_RING_OUTER_RADIUS = 0.052;
+const MARKER_CENTER_RADIUS = 0.018;
 
 function getInteractionNodes(
   scene: Object3D,
@@ -58,6 +70,7 @@ function getInteractionNodes(
 function BodyInteractionHitArea({
   scene,
   config,
+  isOpen,
   onInteract,
 }: BodyInteractionHitAreaProps) {
   const groupRef = useRef<Group | null>(null);
@@ -196,6 +209,66 @@ function BodyInteractionHitArea({
           side={DoubleSide}
         />
       </mesh>
+
+      <Billboard
+        follow
+        lockX={false}
+        lockY={false}
+        lockZ={false}
+      >
+        <group renderOrder={1100}>
+          <mesh
+            onPointerDown={handlePointerDown}
+            onPointerOver={handlePointerOver}
+            onPointerOut={handlePointerOut}
+            renderOrder={1100}
+          >
+            <circleGeometry args={[0.09, 24]} />
+            <meshBasicMaterial
+              transparent
+              opacity={0}
+              depthTest={false}
+              depthWrite={false}
+            />
+          </mesh>
+
+          <mesh
+            onPointerDown={handlePointerDown}
+            onPointerOver={handlePointerOver}
+            onPointerOut={handlePointerOut}
+            renderOrder={1101}
+          >
+            <ringGeometry
+              args={[
+                MARKER_RING_INNER_RADIUS,
+                MARKER_RING_OUTER_RADIUS,
+                28,
+              ]}
+            />
+            <meshBasicMaterial
+              color={isOpen ? "#93c5fd" : "#3b82f6"}
+              transparent
+              opacity={0.98}
+              depthTest={false}
+              depthWrite={false}
+            />
+          </mesh>
+
+          <mesh
+            onPointerDown={handlePointerDown}
+            onPointerOver={handlePointerOver}
+            onPointerOut={handlePointerOut}
+            renderOrder={1102}
+          >
+            <circleGeometry args={[MARKER_CENTER_RADIUS, 16]} />
+            <meshBasicMaterial
+              color="#dbeafe"
+              depthTest={false}
+              depthWrite={false}
+            />
+          </mesh>
+        </group>
+      </Billboard>
     </group>
   );
 }
@@ -205,8 +278,6 @@ export function CarBodyInteractionMarkers({
   openStates,
   onInteract,
 }: CarBodyInteractionMarkersProps) {
-  void openStates;
-
   return (
     <group>
       {BODY_INTERACTION_CONFIGS.map((config) => (
@@ -214,9 +285,12 @@ export function CarBodyInteractionMarkers({
           key={config.key}
           scene={scene}
           config={config}
+          isOpen={openStates[config.key]}
           onInteract={onInteract}
         />
       ))}
+
+      <EngineInformationMarkers scene={scene} />
     </group>
   );
 }

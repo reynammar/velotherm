@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -27,6 +29,10 @@ import {
 import {
   TechnicalLabel,
 } from "@/src/shared/components/TechnicalLabel";
+
+import {
+  SimulationHotspotLegend,
+} from "@/src/features/simulation/components/SimulationHotspotLegend";
 
 import {
   FOUNDATION_TOPICS,
@@ -100,10 +106,15 @@ export function Scene03PistonXRay() {
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [resetKey, setResetKey] = useState(0);
+
   const [selectedHotspot, setSelectedHotspot] =
     useState<PistonXRayHotspotId | null>(null);
+
   const [foundationOpen, setFoundationOpen] = useState(false);
+  const [infoPopupOpen, setInfoPopupOpen] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
+
+  const infoPopupRef = useRef<HTMLDivElement | null>(null);
 
   const balance = useMemo(
     () =>
@@ -131,6 +142,7 @@ export function Scene03PistonXRay() {
     hotspot: PistonXRayHotspotId,
   ) => {
     setSelectedHotspot(hotspot);
+    setInfoPopupOpen(true);
     setFoundationOpen(true);
   };
 
@@ -142,10 +154,60 @@ export function Scene03PistonXRay() {
     setFoundationOpen(true);
   };
 
+  const handleCloseInfoPopup = () => {
+    setInfoPopupOpen(false);
+  };
+
+  const handleCloseFoundation = () => {
+    setFoundationOpen(false);
+  };
+
+  const handleFoundationTopicSelect = (
+    hotspot: PistonXRayHotspotId,
+  ) => {
+    setSelectedHotspot(hotspot);
+    setInfoPopupOpen(false);
+  };
+
   const handleReset = () => {
     setIsPlaying(true);
     setResetKey((current) => current + 1);
   };
+
+  useEffect(() => {
+    if (!infoPopupOpen) {
+      return;
+    }
+
+    const handleOutsidePointerDown = (
+      event: PointerEvent,
+    ) => {
+      const target = event.target;
+
+      if (
+        target instanceof Node &&
+        infoPopupRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setInfoPopupOpen(false);
+    };
+
+    document.addEventListener(
+      "pointerdown",
+      handleOutsidePointerDown,
+      true,
+    );
+
+    return () => {
+      document.removeEventListener(
+        "pointerdown",
+        handleOutsidePointerDown,
+        true,
+      );
+    };
+  }, [infoPopupOpen]);
 
   return (
     <main className="relative h-[100dvh] min-h-[560px] w-full overflow-hidden bg-[var(--color-brand-charcoal)] text-white">
@@ -159,6 +221,8 @@ export function Scene03PistonXRay() {
       </div>
 
       <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-slate-950/20 via-transparent to-slate-950/35" />
+
+      <SimulationHotspotLegend />
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-5 lg:px-6 xl:px-8">
         <div className="relative flex items-start justify-between gap-2">
@@ -185,7 +249,9 @@ export function Scene03PistonXRay() {
                 <span className="shrink-0 font-[var(--font-oswald)] text-base font-bold tracking-tight text-white sm:text-lg lg:text-xl">
                   VELOTHERM
                 </span>
+
                 <span className="h-3.5 w-px shrink-0 bg-slate-600 sm:h-4" />
+
                 <span className="truncate font-[var(--font-chakra-petch)] text-[8px] font-semibold uppercase tracking-[0.15em] text-slate-400 sm:text-[10px] lg:text-xs">
                   MODULE 01
                 </span>
@@ -195,6 +261,7 @@ export function Scene03PistonXRay() {
                 <span className="shrink-0 font-[var(--font-jetbrains-mono)] text-[8px] text-[var(--color-brand-red)] sm:text-[9px]">
                   03
                 </span>
+
                 <span className="truncate font-[var(--font-chakra-petch)] text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-300 sm:text-[9px] lg:text-[10px]">
                   Piston X-Ray
                 </span>
@@ -214,15 +281,19 @@ export function Scene03PistonXRay() {
                   <span className="block font-[var(--font-chakra-petch)] text-[8px] uppercase tracking-[0.14em] text-slate-500">
                     ΔU
                   </span>
+
                   <span className="font-[var(--font-oswald)] text-lg font-semibold text-cyan-300">
                     {balance.deltaEnergyKJ.toFixed(1)} kJ
                   </span>
                 </div>
+
                 <span className="h-7 w-px bg-slate-700" />
+
                 <div>
                   <span className="block font-[var(--font-chakra-petch)] text-[8px] uppercase tracking-[0.14em] text-slate-500">
                     Engine
                   </span>
+
                   <span className="font-[var(--font-jetbrains-mono)] text-[8px] font-semibold uppercase text-red-400 sm:text-[9px]">
                     {isPlaying ? "Running" : "Paused"}
                   </span>
@@ -241,6 +312,7 @@ export function Scene03PistonXRay() {
               }}
             >
               <BookOpen size={13} strokeWidth={1.6} />
+
               <span className="hidden font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.14em] text-slate-300 sm:inline">
                 Foundation
               </span>
@@ -249,12 +321,52 @@ export function Scene03PistonXRay() {
         </div>
       </header>
 
+      {/* =====================================================
+          STATIC INFORMATION POPUP
+      ===================================================== */}
+
+      {infoPopupOpen && selectedHotspot && (
+        <div
+          ref={infoPopupRef}
+          className="pointer-events-auto absolute left-1/2 top-[20%] z-[80] w-[210px] max-w-[calc(100vw-1.5rem)] -translate-x-1/2 border border-red-500/75 bg-slate-950/97 px-3 py-2.5 shadow-[0_6px_18px_rgba(0,0,0,0.42)] backdrop-blur-md lg:top-[40%]"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <span className="min-w-0 font-[var(--font-chakra-petch)] text-[8px] font-bold uppercase leading-relaxed tracking-[0.06em] text-red-400">
+              {activeFoundationEntry.title}
+            </span>
+
+            <button
+              type="button"
+              aria-label="Close information"
+              onClick={handleCloseInfoPopup}
+              className="flex h-5 w-5 shrink-0 items-center justify-center border border-slate-700 bg-slate-900/80 text-slate-400 transition-colors hover:border-red-500/70 hover:text-red-300"
+            >
+              <X size={10} strokeWidth={1.7} />
+            </button>
+          </div>
+
+          <p className="mt-1.5 font-[var(--font-jetbrains-mono)] text-[9px] leading-[1.55] text-slate-300">
+            {activeFoundationEntry.description}
+          </p>
+
+          <div className="mt-2 border-t border-slate-800 pt-1.5">
+            <span className="font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-[0.1em] text-slate-600">
+              Information · Foundation
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+          FOUNDATION PANEL
+      ===================================================== */}
+
       {foundationOpen && (
         <>
           <button
             type="button"
             aria-label="Close foundation panel"
-            onClick={() => setFoundationOpen(false)}
+            onClick={handleCloseFoundation}
             className="absolute inset-0 z-[65] bg-slate-950/35 backdrop-blur-[2px] lg:hidden"
           />
 
@@ -262,8 +374,8 @@ export function Scene03PistonXRay() {
             <FoundationPanel
               activeEntry={activeFoundationEntry}
               activeTopic={activeFoundationTopic}
-              onSelect={setSelectedHotspot}
-              onClose={() => setFoundationOpen(false)}
+              onSelect={handleFoundationTopicSelect}
+              onClose={handleCloseFoundation}
             />
           </aside>
 
@@ -272,13 +384,17 @@ export function Scene03PistonXRay() {
               <FoundationPanel
                 activeEntry={activeFoundationEntry}
                 activeTopic={activeFoundationTopic}
-                onSelect={setSelectedHotspot}
-                onClose={() => setFoundationOpen(false)}
+                onSelect={handleFoundationTopicSelect}
+                onClose={handleCloseFoundation}
               />
             </div>
           </aside>
         </>
       )}
+
+      {/* =====================================================
+          ENERGY LEDGER & ENGINE CONTROLS
+      ===================================================== */}
 
       <div
         className={[
@@ -287,14 +403,14 @@ export function Scene03PistonXRay() {
         ].join(" ")}
       >
         {controlsVisible ? (
-          <div className="relative mx-auto w-full max-w-[980px]">
+          <div className="pointer-events-auto relative mx-auto w-full max-w-[980px]">
             <button
               type="button"
               aria-expanded={controlsVisible}
               aria-controls="scene03-energy-controls"
               aria-label="Hide simulation controls"
               onClick={() => setControlsVisible(false)}
-              className="group pointer-events-auto absolute left-1/2 top-0 z-[60] flex -translate-x-1/2 -translate-y-full items-center gap-1.5 border border-b-0 border-slate-700/90 bg-slate-950/95 px-3 py-1.5 shadow-lg backdrop-blur-md transition-colors hover:border-slate-500 hover:bg-slate-900"
+              className="group absolute left-1/2 top-0 z-[60] flex -translate-x-1/2 -translate-y-full items-center gap-1.5 border border-b-0 border-slate-700/90 bg-slate-950/95 px-3 py-1.5 shadow-lg backdrop-blur-md transition-colors hover:border-slate-500 hover:bg-slate-900"
               style={{
                 clipPath: "var(--clip-chamfer-sm)",
               }}
@@ -302,10 +418,11 @@ export function Scene03PistonXRay() {
               <span className="font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.14em] text-slate-400 transition-colors group-hover:text-white">
                 Hide Controls
               </span>
+
               <svg
                 aria-hidden="true"
                 viewBox="0 0 12 12"
-                className="h-2.5 w-2.5 text-slate-500"
+                className="h-2.5 w-2.5 text-slate-500 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:text-slate-200"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.5"
@@ -316,16 +433,17 @@ export function Scene03PistonXRay() {
 
             <div
               id="scene03-energy-controls"
-              className="pointer-events-none grid gap-2.5 sm:gap-3 md:grid-cols-[1.45fr_0.75fr]"
+              className="grid gap-2.5 sm:gap-3 md:grid-cols-[1.45fr_0.75fr]"
             >
               <Panel
                 variant="dark"
-                className="pointer-events-auto border-slate-700/90 bg-slate-950/88 p-3 shadow-2xl backdrop-blur-xl sm:p-4 lg:p-5"
+                className="border-slate-700/90 bg-slate-950/88 p-3 shadow-2xl backdrop-blur-xl sm:p-4 lg:p-5"
               >
                 <div className="flex items-center justify-between gap-3">
                   <TechnicalLabel accent="cyan">
                     Energy Ledger
                   </TechnicalLabel>
+
                   <span className="font-[var(--font-jetbrains-mono)] text-[7px] uppercase tracking-[0.12em] text-slate-500 sm:text-[8px]">
                     First Law · kJ
                   </span>
@@ -337,11 +455,13 @@ export function Scene03PistonXRay() {
                     value={`+${balance.heatInputKJ.toFixed(1)}`}
                     accent="red"
                   />
+
                   <EnergyMetric
                     label="Work Output · Wout"
                     value={`−${balance.workOutputKJ.toFixed(1)}`}
                     accent="white"
                   />
+
                   <EnergyMetric
                     label="Internal Energy · ΔU"
                     value={`${balance.deltaEnergyKJ >= 0 ? "+" : ""}${balance.deltaEnergyKJ.toFixed(1)}`}
@@ -354,14 +474,17 @@ export function Scene03PistonXRay() {
                     <span className="font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.14em] text-slate-500 sm:text-[8px]">
                       First Law of Thermodynamics
                     </span>
+
                     <span className="font-[var(--font-jetbrains-mono)] text-[7px] uppercase text-slate-500 sm:text-[8px]">
                       {energyState}
                     </span>
                   </div>
+
                   <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <span className="font-[var(--font-jetbrains-mono)] text-lg font-bold tracking-tight text-cyan-300 sm:text-2xl lg:text-[27px]">
                       ΔU = Qin − Wout
                     </span>
+
                     <span className="font-[var(--font-jetbrains-mono)] text-[8px] text-slate-400 sm:text-[9px]">
                       {balance.heatInputKJ.toFixed(1)} − {balance.workOutputKJ.toFixed(1)} = {balance.deltaEnergyKJ.toFixed(1)} kJ
                     </span>
@@ -371,13 +494,14 @@ export function Scene03PistonXRay() {
 
               <Panel
                 variant="dark"
-                className="pointer-events-auto flex flex-col justify-between border-slate-700/90 bg-slate-950/88 p-3 shadow-2xl backdrop-blur-xl sm:p-4 lg:p-5"
+                className="flex flex-col justify-between border-slate-700/90 bg-slate-950/88 p-3 shadow-2xl backdrop-blur-xl sm:p-4 lg:p-5"
               >
                 <div>
                   <div className="flex items-center justify-between gap-3">
                     <TechnicalLabel>
                       Engine System
                     </TechnicalLabel>
+
                     <span
                       className={[
                         "h-1.5 w-1.5 rounded-full",
@@ -393,10 +517,12 @@ export function Scene03PistonXRay() {
                       label="Piston Motion"
                       value={isPlaying ? "Active" : "Paused"}
                     />
+
                     <EngineReadout
                       label="Heat Particles"
                       value={isPlaying ? "Active" : "Paused"}
                     />
+
                     <EngineReadout
                       label="Energy State"
                       value={energyState}
@@ -413,6 +539,7 @@ export function Scene03PistonXRay() {
                   >
                     {isPlaying ? "Pause Engine" : "Run Engine"}
                   </Button>
+
                   <Button
                     type="button"
                     size="sm"
@@ -447,6 +574,7 @@ export function Scene03PistonXRay() {
             >
               <path d="m2.5 4.5 3.5 3.5 3.5-3.5" />
             </svg>
+
             <span className="font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.14em] text-slate-400">
               Show Controls
             </span>
@@ -479,10 +607,12 @@ function EnergyMetric({
       <span className="block truncate font-[var(--font-chakra-petch)] text-[6px] font-semibold uppercase tracking-wide text-slate-500 sm:text-[8px]">
         {label}
       </span>
+
       <div className="mt-1 flex items-baseline gap-1">
         <span className={`font-[var(--font-oswald)] text-xl font-semibold tabular-nums sm:text-2xl lg:text-3xl ${valueClass}`}>
           {value}
         </span>
+
         <span className="font-[var(--font-jetbrains-mono)] text-[7px] text-slate-500 sm:text-[8px]">
           kJ
         </span>
@@ -503,6 +633,7 @@ function EngineReadout({
       <span className="font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-wide text-slate-500 sm:text-[8px]">
         {label}
       </span>
+
       <span className="font-[var(--font-jetbrains-mono)] text-[8px] font-semibold uppercase text-slate-200 sm:text-[9px]">
         {value}
       </span>
@@ -541,17 +672,21 @@ function FoundationPanel({
                 strokeWidth={1.6}
                 className="shrink-0 text-cyan-400"
               />
+
               <span className="font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.16em] text-cyan-400">
                 Foundation
               </span>
             </div>
+
             <span className="mt-1 block truncate font-[var(--font-oswald)] text-sm font-semibold uppercase text-white">
               First Law of Thermodynamics
             </span>
+
             <span className="mt-0.5 block font-[var(--font-jetbrains-mono)] text-[6px] uppercase tracking-wide text-slate-500">
               Module 01 · Scene 03
             </span>
           </div>
+
           <button
             type="button"
             aria-label="Close foundation"
@@ -586,9 +721,11 @@ function FoundationPanel({
                     active ? "bg-red-500" : "bg-slate-700",
                   ].join(" ")}
                 />
+
                 <span className="min-w-0 truncate font-[var(--font-chakra-petch)] text-[6px] font-semibold uppercase tracking-[0.02em]">
                   {entry.shortLabel}
                 </span>
+
                 <ChevronRight
                   size={9}
                   className="ml-auto hidden shrink-0 sm:block"
@@ -603,6 +740,7 @@ function FoundationPanel({
         <span className="block font-[var(--font-jetbrains-mono)] text-[6px] font-semibold uppercase tracking-[0.15em] text-red-400">
           {activeTopic?.eyebrow ?? "THERMODYNAMICS"}
         </span>
+
         <h2 className="mt-1 font-[var(--font-oswald)] text-xl font-semibold uppercase leading-tight text-white">
           {activeEntry.title}
         </h2>
@@ -611,6 +749,7 @@ function FoundationPanel({
           <span className="block font-[var(--font-chakra-petch)] text-[6px] font-semibold uppercase tracking-[0.12em] text-slate-600">
             Concept
           </span>
+
           <p className="mt-1 font-[var(--font-jetbrains-mono)] text-[7px] leading-relaxed text-slate-300">
             {activeEntry.description}
           </p>
@@ -621,6 +760,7 @@ function FoundationPanel({
             <span className="block font-[var(--font-chakra-petch)] text-[6px] font-semibold uppercase tracking-[0.12em] text-slate-600">
               Differential Boundary Work
             </span>
+
             <span className="mt-1.5 block font-[var(--font-jetbrains-mono)] text-base font-semibold text-cyan-300">
               δW = P dV
             </span>
@@ -632,6 +772,7 @@ function FoundationPanel({
             <span className="block font-[var(--font-chakra-petch)] text-[6px] font-semibold uppercase tracking-[0.12em] text-slate-600">
               Key Terms
             </span>
+
             <div className="mt-1.5 flex flex-wrap gap-1">
               {activeTopic.terms.map((term) => (
                 <span
@@ -650,6 +791,7 @@ function FoundationPanel({
             <span className="block font-[var(--font-chakra-petch)] text-[6px] font-semibold uppercase tracking-[0.12em] text-cyan-500">
               Takeaway
             </span>
+
             <p className="mt-1 font-[var(--font-jetbrains-mono)] text-[6px] leading-relaxed text-slate-400">
               {activeTopic.takeaway}
             </p>

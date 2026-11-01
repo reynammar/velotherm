@@ -22,13 +22,31 @@ type FoundationLayerProps = {
   sceneNumber: string;
   sceneLabel: string;
   open: boolean;
+  preferredTopicId?: string | null;
+  preferredTopicRequestKey?: number;
   onClose: () => void;
 };
 
-export function FoundationLayer({
+export function FoundationLayer(
+  props: FoundationLayerProps,
+) {
+  if (!props.open) {
+    return null;
+  }
+
+  return (
+    <FoundationLayerContent
+      key={`${props.sceneNumber}:${props.preferredTopicRequestKey ?? 0}`}
+      {...props}
+    />
+  );
+}
+
+function FoundationLayerContent({
   moduleLabel,
   sceneNumber,
   sceneLabel,
+  preferredTopicId = null,
   open,
   onClose,
 }: FoundationLayerProps) {
@@ -48,32 +66,41 @@ export function FoundationLayer({
     [sceneNumber],
   );
 
-  /**
-   * The component is keyed by sceneNumber
-   * from SimulationShell.
-   *
-   * Therefore this initial value is recreated
-   * automatically whenever the active scene
-   * changes.
-   */
   const [
     activeTopicId,
     setActiveTopicId,
-  ] = useState(
-    topics[0]?.id ?? "",
-  );
+  ] = useState(() => {
+    const preferredTopicExists =
+      topics.some(
+        (topic) =>
+          topic.id === preferredTopicId,
+      );
+
+    if (
+      preferredTopicExists &&
+      preferredTopicId
+    ) {
+      return preferredTopicId;
+    }
+
+    return topics[0]?.id ?? "";
+  });
 
   const activeTopic =
     topics.find(
       (topic) =>
-        topic.id ===
-        activeTopicId,
-    ) ??
-    topics[0];
+        topic.id === activeTopicId,
+    ) ?? topics[0];
 
   if (!open) {
     return null;
   }
+
+  const handleSelectTopic = (
+    id: string,
+  ) => {
+    setActiveTopicId(id);
+  };
 
   return (
     <>
@@ -83,34 +110,14 @@ export function FoundationLayer({
 
       <aside className="absolute right-4 top-28 z-[60] hidden h-[calc(100dvh-8.5rem)] w-[390px] max-w-[calc(100vw-2rem)] min-[1280px]:block">
         <FoundationContent
-          moduleLabel={
-            moduleLabel
-          }
-          sceneNumber={
-            sceneNumber
-          }
-          sceneLabel={
-            sceneLabel
-          }
-          context={
-            context
-          }
-          topics={
-            topics
-          }
-          activeTopic={
-            activeTopic
-          }
-          onSelectTopic={(
-            id,
-          ) =>
-            setActiveTopicId(
-              id,
-            )
-          }
-          onClose={
-            onClose
-          }
+          moduleLabel={moduleLabel}
+          sceneNumber={sceneNumber}
+          sceneLabel={sceneLabel}
+          context={context}
+          topics={topics}
+          activeTopic={activeTopic}
+          onSelectTopic={handleSelectTopic}
+          onClose={onClose}
         />
       </aside>
 
@@ -121,9 +128,7 @@ export function FoundationLayer({
       <button
         type="button"
         aria-label="Close foundation"
-        onClick={
-          onClose
-        }
+        onClick={onClose}
         className="absolute inset-0 z-[65] bg-slate-950/40 backdrop-blur-[2px] min-[1280px]:hidden"
       />
 
@@ -134,34 +139,14 @@ export function FoundationLayer({
       <aside className="absolute inset-x-0 bottom-0 z-[70] min-[1280px]:hidden">
         <div className="mx-auto max-h-[72dvh] w-full max-w-3xl px-2 pb-2 sm:px-4 sm:pb-4">
           <FoundationContent
-            moduleLabel={
-              moduleLabel
-            }
-            sceneNumber={
-              sceneNumber
-            }
-            sceneLabel={
-              sceneLabel
-            }
-            context={
-              context
-            }
-            topics={
-              topics
-            }
-            activeTopic={
-              activeTopic
-            }
-            onSelectTopic={(
-              id,
-            ) =>
-              setActiveTopicId(
-                id,
-              )
-            }
-            onClose={
-              onClose
-            }
+            moduleLabel={moduleLabel}
+            sceneNumber={sceneNumber}
+            sceneLabel={sceneLabel}
+            context={context}
+            topics={topics}
+            activeTopic={activeTopic}
+            onSelectTopic={handleSelectTopic}
+            onClose={onClose}
           />
         </div>
       </aside>
@@ -197,16 +182,13 @@ function FoundationContent({
   onClose,
 }: FoundationContentProps) {
   const recommendedCount =
-    context
-      .recommendedTopics
-      .length;
+    context.recommendedTopics.length;
 
   return (
     <div
       className="flex h-full min-h-0 flex-col overflow-hidden border border-slate-700/90 bg-slate-950/97 shadow-2xl backdrop-blur-xl"
       style={{
-        clipPath:
-          "var(--clip-chamfer-sm)",
+        clipPath: "var(--clip-chamfer-sm)",
       }}
     >
       {/* =================================================
@@ -233,18 +215,14 @@ function FoundationContent({
             </span>
 
             <span className="mt-0.5 block truncate font-[var(--font-jetbrains-mono)] text-[6px] uppercase tracking-wide text-slate-500 sm:text-[7px]">
-              {moduleLabel} ·{" "}
-              {sceneNumber} ·{" "}
-              {sceneLabel}
+              {moduleLabel} · {sceneNumber} · {sceneLabel}
             </span>
           </div>
 
           <button
             type="button"
             aria-label="Close foundation"
-            onClick={
-              onClose
-            }
+            onClick={onClose}
             className="flex h-7 w-7 shrink-0 items-center justify-center border border-slate-700 text-slate-400 transition-colors hover:border-slate-500 hover:text-white sm:h-8 sm:w-8"
           >
             <X
@@ -264,15 +242,11 @@ function FoundationContent({
           </span>
 
           <span className="mt-1 block font-[var(--font-oswald)] text-sm font-semibold uppercase text-white">
-            {
-              context.contextTitle
-            }
+            {context.contextTitle}
           </span>
 
           <p className="mt-1 font-[var(--font-jetbrains-mono)] text-[7px] leading-relaxed text-slate-500">
-            {
-              context.contextDescription
-            }
+            {context.contextDescription}
           </p>
         </div>
       </div>
@@ -289,28 +263,19 @@ function FoundationContent({
         <div className="shrink-0 border-b border-slate-800 sm:w-[148px] sm:border-b-0 sm:border-r">
           <div className="flex gap-1.5 overflow-x-auto p-2 sm:h-full sm:flex-col sm:overflow-y-auto">
             {topics.map(
-              (
-                topic,
-                index,
-              ) => {
+              (topic, index) => {
                 const active =
-                  topic.id ===
-                  activeTopic?.id;
+                  topic.id === activeTopic?.id;
 
                 const recommended =
-                  index <
-                  recommendedCount;
+                  index < recommendedCount;
 
                 return (
                   <button
-                    key={
-                      topic.id
-                    }
+                    key={topic.id}
                     type="button"
                     onClick={() =>
-                      onSelectTopic(
-                        topic.id,
-                      )
+                      onSelectTopic(topic.id)
                     }
                     className={[
                       "group flex shrink-0 items-center gap-2 border px-2 py-2 text-left transition-colors",
@@ -318,9 +283,7 @@ function FoundationContent({
                       active
                         ? "border-cyan-400/60 bg-cyan-500/10 text-cyan-300"
                         : "border-slate-800 bg-slate-950/45 text-slate-500 hover:border-slate-600 hover:text-white",
-                    ].join(
-                      " ",
-                    )}
+                    ].join(" ")}
                   >
                     <span
                       className={[
@@ -328,15 +291,11 @@ function FoundationContent({
                         recommended
                           ? "bg-cyan-400"
                           : "bg-slate-700",
-                      ].join(
-                        " ",
-                      )}
+                      ].join(" ")}
                     />
 
                     <span className="min-w-0 flex-1 truncate font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.04em] sm:max-w-none">
-                      {
-                        topic.title
-                      }
+                      {topic.title}
                     </span>
 
                     <ChevronRight
@@ -347,9 +306,7 @@ function FoundationContent({
                         active
                           ? "text-cyan-300"
                           : "text-slate-700",
-                      ].join(
-                        " ",
-                      )}
+                      ].join(" ")}
                     />
                   </button>
                 );
@@ -369,17 +326,12 @@ function FoundationContent({
                 <span
                   className={[
                     "font-[var(--font-jetbrains-mono)] text-[7px] font-semibold uppercase tracking-[0.16em]",
-                    activeTopic.accent ===
-                      "red"
+                    activeTopic.accent === "red"
                       ? "text-[var(--color-brand-red)]"
                       : "text-cyan-400",
-                  ].join(
-                    " ",
-                  )}
+                  ].join(" ")}
                 >
-                  {
-                    activeTopic.eyebrow
-                  }
+                  {activeTopic.eyebrow}
                 </span>
 
                 <span className="font-[var(--font-jetbrains-mono)] text-[6px] uppercase text-slate-700">
@@ -388,9 +340,7 @@ function FoundationContent({
               </div>
 
               <h2 className="mt-1.5 font-[var(--font-oswald)] text-2xl font-semibold uppercase leading-none text-white sm:text-[26px]">
-                {
-                  activeTopic.title
-                }
+                {activeTopic.title}
               </h2>
 
               {/* =================================================
@@ -403,9 +353,7 @@ function FoundationContent({
                 </span>
 
                 <p className="mt-1.5 font-[var(--font-jetbrains-mono)] text-[8px] leading-relaxed text-slate-400">
-                  {
-                    activeTopic.summary
-                  }
+                  {activeTopic.summary}
                 </p>
               </div>
 
@@ -421,9 +369,7 @@ function FoundationContent({
 
                   <div className="mt-2 overflow-x-auto">
                     <span className="block whitespace-nowrap font-[var(--font-jetbrains-mono)] text-sm font-semibold text-cyan-300 sm:text-base">
-                      {
-                        activeTopic.formula
-                      }
+                      {activeTopic.formula}
                     </span>
                   </div>
                 </div>
@@ -440,18 +386,12 @@ function FoundationContent({
 
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {activeTopic.terms.map(
-                    (
-                      term,
-                    ) => (
+                    (term) => (
                       <span
-                        key={
-                          term
-                        }
+                        key={term}
                         className="border border-slate-800 bg-slate-950 px-2 py-1 font-[var(--font-jetbrains-mono)] text-[6px] text-slate-400"
                       >
-                        {
-                          term
-                        }
+                        {term}
                       </span>
                     ),
                   )}
@@ -465,32 +405,24 @@ function FoundationContent({
               <div
                 className={[
                   "mt-4 border-l px-3 py-2.5",
-                  activeTopic.accent ===
-                    "red"
+                  activeTopic.accent === "red"
                     ? "border-l-[var(--color-brand-red)] bg-red-500/5"
                     : "border-l-cyan-400 bg-cyan-500/5",
-                ].join(
-                  " ",
-                )}
+                ].join(" ")}
               >
                 <span
                   className={[
                     "block font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.12em]",
-                    activeTopic.accent ===
-                      "red"
+                    activeTopic.accent === "red"
                       ? "text-[var(--color-brand-red)]"
                       : "text-cyan-500",
-                  ].join(
-                    " ",
-                  )}
+                  ].join(" ")}
                 >
                   Takeaway
                 </span>
 
                 <p className="mt-1 font-[var(--font-jetbrains-mono)] text-[7px] leading-relaxed text-slate-400">
-                  {
-                    activeTopic.takeaway
-                  }
+                  {activeTopic.takeaway}
                 </p>
               </div>
             </div>
@@ -509,8 +441,7 @@ function FoundationContent({
           </span>
 
           <span className="font-[var(--font-jetbrains-mono)] text-[6px] uppercase tracking-wide text-slate-600">
-            {topics.length}{" "}
-            topics
+            {topics.length} topics
           </span>
         </div>
       </div>

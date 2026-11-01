@@ -12,7 +12,6 @@ import {
 
 import {
   Billboard,
-  Html,
   OrbitControls,
   useGLTF,
 } from "@react-three/drei";
@@ -55,8 +54,6 @@ export type PistonXRayHotspotId =
 
 type HotspotDefinition = {
   id: PistonXRayHotspotId;
-  label: string;
-  description: string;
 };
 
 type PistonXRayStageProps = {
@@ -74,12 +71,9 @@ type HotspotMarkerProps = {
     node: Group | null,
   ) => void;
   active: boolean;
-  showInfo: boolean;
-  infoCardRef: RefObject<HTMLDivElement | null>;
   onSelect: (
     hotspot: PistonXRayHotspotId,
   ) => void;
-  onCloseInfo: () => void;
 };
 
 type CameraControlsRef = RefObject<
@@ -87,30 +81,10 @@ type CameraControlsRef = RefObject<
 >;
 
 const HOTSPOTS: HotspotDefinition[] = [
-  {
-    id: "heat-input",
-    label: "Heat Input (Qin):",
-    description:
-      "Microscopic energy transfer driven by temperature gradient.",
-  },
-  {
-    id: "boundary-work",
-    label: "Boundary Work (Wout):",
-    description:
-      "Macroscopic energy transfer via moving boundary, where δW = P dV.",
-  },
-  {
-    id: "system-boundary",
-    label: "Closed System Boundary:",
-    description:
-      "Fixed mass system allowing only energy (heat and work) to cross.",
-  },
-  {
-    id: "internal-energy",
-    label: "Internal Energy (ΔU):",
-    description:
-      "Point function representing molecular activity within the system.",
-  },
+  { id: "heat-input" },
+  { id: "boundary-work" },
+  { id: "system-boundary" },
+  { id: "internal-energy" },
 ];
 
 const PARTICLE_COUNT = 22;
@@ -130,10 +104,7 @@ function HotspotMarker({
   definition,
   markerRef,
   active,
-  showInfo,
-  infoCardRef,
   onSelect,
-  onCloseInfo,
 }: HotspotMarkerProps) {
   const [hovered, setHovered] = useState(false);
 
@@ -142,6 +113,22 @@ function HotspotMarker({
   ) => {
     event.stopPropagation();
     onSelect(definition.id);
+  };
+
+  const handlePointerOver = (
+    event: ThreeEvent<PointerEvent>,
+  ) => {
+    event.stopPropagation();
+    setHovered(true);
+    document.body.style.cursor = "pointer";
+  };
+
+  const handlePointerOut = (
+    event: ThreeEvent<PointerEvent>,
+  ) => {
+    event.stopPropagation();
+    setHovered(false);
+    document.body.style.cursor = "";
   };
 
   return (
@@ -155,17 +142,12 @@ function HotspotMarker({
         <group>
           <mesh
             onClick={handleClick}
-            onPointerOver={(event) => {
-              event.stopPropagation();
-              setHovered(true);
-            }}
-            onPointerOut={(event) => {
-              event.stopPropagation();
-              setHovered(false);
-            }}
+            onPointerOver={handlePointerOver}
+            onPointerOut={handlePointerOut}
             renderOrder={1200}
           >
             <sphereGeometry args={[0.105, 16, 12]} />
+
             <meshBasicMaterial
               transparent
               opacity={0}
@@ -176,18 +158,13 @@ function HotspotMarker({
 
           <mesh
             onClick={handleClick}
-            onPointerOver={(event) => {
-              event.stopPropagation();
-              setHovered(true);
-            }}
-            onPointerOut={(event) => {
-              event.stopPropagation();
-              setHovered(false);
-            }}
+            onPointerOver={handlePointerOver}
+            onPointerOut={handlePointerOut}
             scale={hovered || active ? 1.2 : 1}
             renderOrder={1201}
           >
             <ringGeometry args={[0.044, 0.064, 28]} />
+
             <meshBasicMaterial
               color={
                 hovered || active
@@ -203,77 +180,18 @@ function HotspotMarker({
 
           <mesh
             onClick={handleClick}
-            onPointerOver={(event) => {
-              event.stopPropagation();
-              setHovered(true);
-            }}
-            onPointerOut={(event) => {
-              event.stopPropagation();
-              setHovered(false);
-            }}
+            onPointerOver={handlePointerOver}
+            onPointerOut={handlePointerOut}
             renderOrder={1202}
           >
             <sphereGeometry args={[0.022, 12, 10]} />
+
             <meshBasicMaterial
               color="#ef4444"
               depthTest={false}
               depthWrite={false}
             />
           </mesh>
-
-          {showInfo && (
-            <Html
-              position={[0, 0.16, 0]}
-              center
-              distanceFactor={9}
-              zIndexRange={[1000, 0]}
-              style={{
-                pointerEvents: "auto",
-              }}
-            >
-              <div
-                ref={infoCardRef}
-                className="relative w-[180px] max-w-[calc(100vw-2rem)] border border-red-500/75 bg-slate-950/97 px-2.5 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-xl"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-[var(--font-chakra-petch)] text-[7px] font-bold uppercase tracking-[0.08em] leading-relaxed text-red-400">
-                    {definition.label}
-                  </span>
-
-                  <button
-                    type="button"
-                    aria-label="Close information"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onCloseInfo();
-                    }}
-                    className="flex h-5 w-5 shrink-0 items-center justify-center border border-slate-700 bg-slate-900/80 text-slate-400 transition-colors hover:border-red-500/70 hover:bg-red-500/10 hover:text-red-400"
-                  >
-                    <svg
-                      viewBox="0 0 16 16"
-                      width="10"
-                      height="10"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    >
-                      <path d="m4 4 8 8M12 4l-8 8" />
-                    </svg>
-                  </button>
-                </div>
-
-                <p className="mt-1.5 pr-1 font-[var(--font-jetbrains-mono)] text-[7px] leading-relaxed text-slate-300">
-                  {definition.description}
-                </p>
-
-                <div className="mt-2 border-t border-slate-800 pt-1.5">
-                  <span className="font-[var(--font-chakra-petch)] text-[6px] uppercase tracking-[0.12em] text-slate-600">
-                    VELOTHERM · MODULE 01
-                  </span>
-                </div>
-              </div>
-            </Html>
-          )}
         </group>
       </Billboard>
     </group>
@@ -383,10 +301,6 @@ function PistonXRayVisualization({
   const particleFieldRef = useRef<Group | null>(null);
   const particleRefs = useRef<Array<Mesh | null>>([]);
 
-  const infoCardRef = useRef<HTMLDivElement | null>(null);
-
-  const [infoVisible, setInfoVisible] = useState(false);
-
   const markerRefs = useRef<
     Record<PistonXRayHotspotId, Group | null>
   >({
@@ -410,52 +324,6 @@ function PistonXRayVisualization({
     }),
     [scene],
   );
-
-  const handleHotspotSelect = (
-    hotspot: PistonXRayHotspotId,
-  ) => {
-    setInfoVisible(true);
-    onHotspotSelect(hotspot);
-  };
-
-  const handleInfoClose = () => {
-    setInfoVisible(false);
-  };
-
-  useEffect(() => {
-    if (!infoVisible) {
-      return;
-    }
-
-    const handleOutsidePointerDown = (
-      event: PointerEvent,
-    ) => {
-      const target = event.target;
-
-      if (
-        target instanceof Node &&
-        infoCardRef.current?.contains(target)
-      ) {
-        return;
-      }
-
-      setInfoVisible(false);
-    };
-
-    document.addEventListener(
-      "pointerdown",
-      handleOutsidePointerDown,
-      true,
-    );
-
-    return () => {
-      document.removeEventListener(
-        "pointerdown",
-        handleOutsidePointerDown,
-        true,
-      );
-    };
-  }, [infoVisible]);
 
   useFrame(({ clock }) => {
     const overlay = overlayRef.current;
@@ -595,13 +463,7 @@ function PistonXRayVisualization({
           definition={hotspot}
           markerRef={setMarkerRef(hotspot.id)}
           active={selectedHotspot === hotspot.id}
-          showInfo={
-            infoVisible &&
-            selectedHotspot === hotspot.id
-          }
-          infoCardRef={infoCardRef}
-          onSelect={handleHotspotSelect}
-          onCloseInfo={handleInfoClose}
+          onSelect={onHotspotSelect}
         />
       ))}
 
@@ -620,6 +482,7 @@ function PistonXRayVisualization({
             visible={false}
           >
             <sphereGeometry args={[0.014, 8, 8]} />
+
             <meshBasicMaterial
               color={
                 index % 3 === 0
