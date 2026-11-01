@@ -55,12 +55,14 @@ export function SimulationSceneNavigator({
         activeScene,
     );
 
-  const activeIndex =
-    activeSceneData
-      ? scenes.indexOf(
-          activeSceneData,
-        )
-      : 0;
+  const totalSceneNumber = scenes.reduce(
+    (highestNumber, scene) =>
+      Math.max(
+        highestNumber,
+        Number(getSceneNumber(scene.label)) || 0,
+      ),
+    0,
+  );
 
   const handleChange = (
     sceneId: string,
@@ -197,11 +199,11 @@ export function SimulationSceneNavigator({
 
               <span className="font-[var(--font-jetbrains-mono)] text-[9px] font-semibold text-white sm:text-[10px]">
                 {getSceneNumber(
-                activeSceneData?.label ??
+                  activeSceneData?.label ??
                     "",
                 ).padStart(
-                2,
-                "0",
+                  2,
+                  "0",
                 )}
               </span>
             </span>
@@ -252,15 +254,15 @@ export function SimulationSceneNavigator({
 
               <span className="mt-1 block font-[var(--font-jetbrains-mono)] text-[8px] uppercase text-slate-500">
                 {getSceneNumber(
-                activeSceneData?.label ??
+                  activeSceneData?.label ??
                     "",
                 ).padStart(
-                2,
-                "0",
+                  2,
+                  "0",
                 )}
                 /
                 {String(
-                  scenes.length,
+                  totalSceneNumber,
                 ).padStart(
                   2,
                   "0",

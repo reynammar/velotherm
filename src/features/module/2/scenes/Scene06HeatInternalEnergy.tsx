@@ -183,11 +183,11 @@ export function Scene06HeatInternalEnergy() {
             </div>
 
             <div className="mt-5 border-t border-slate-700 pt-4">
-              <p className="font-[var(--font-jetbrains-mono)] text-[9px] leading-relaxed text-slate-400">
+              <p className="font-[var(--font-jetbrains-mono)] text-sm font-semibold leading-relaxed text-slate-200 sm:text-base">
                 E = KE + PE + U
               </p>
 
-              <p className="mt-2 font-[var(--font-jetbrains-mono)] text-[9px] leading-relaxed text-slate-500">
+              <p className="mt-2 font-[var(--font-jetbrains-mono)] text-sm font-semibold leading-relaxed text-slate-300 sm:text-base">
                 ΔE = ΔKE + ΔPE + ΔU
               </p>
             </div>

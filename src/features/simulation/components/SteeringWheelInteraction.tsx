@@ -26,6 +26,7 @@ import {
   MathUtils,
   Quaternion,
   Vector3,
+  type Group,
   type Object3D,
 } from "three";
 
@@ -37,254 +38,63 @@ const STEERING_WHEEL_NODES = [
   "AR_SteeringWheel_Spoke_3",
 ] as const;
 
-const MAX_STEERING_ROTATION =
-  MathUtils.degToRad(540);
-
+const MAX_STEERING_ROTATION = MathUtils.degToRad(540);
 const STEERING_DIRECTION = 1;
-
-/**
- * Verified manually for the final GLB.
- *
- * X axis = steering axle.
- */
-const STEERING_AXIS = new Vector3(
-  1,
-  0,
-  0,
-);
+const STEERING_AXIS = new Vector3(1, 0, 0);
 
 type SteeringWheelInteractionProps = {
   scene: Object3D;
 };
 
-type OriginalWorldTransform = {
+type OriginalLocalTransform = {
   node: Object3D;
   position: Vector3;
   quaternion: Quaternion;
   scale: Vector3;
 };
 
-function getRequiredNodes(
-  scene: Object3D,
-): Object3D[] {
+function getRequiredNodes(scene: Object3D): Object3D[] {
   return STEERING_WHEEL_NODES
-    .map(
-      (name) =>
-        scene.getObjectByName(
-          name,
-        ),
-    )
-    .filter(
-      (
-        node,
-      ): node is Object3D =>
-        Boolean(node),
-    );
+    .map((name) => scene.getObjectByName(name))
+    .filter((node): node is Object3D => Boolean(node));
 }
 
-function getCombinedBounds(
-  nodes: Object3D[],
-): Box3 {
-  const bounds =
-    new Box3();
+function getCombinedBounds(nodes: Object3D[]): Box3 {
+  const bounds = new Box3();
 
-  for (
-    const node of nodes
-  ) {
-    bounds.expandByObject(
-      node,
-    );
+  for (const node of nodes) {
+    bounds.expandByObject(node);
   }
 
   return bounds;
 }
 
-function getWorldCenter(
-  nodes: Object3D[],
-): Vector3 | null {
-  if (
-    nodes.length === 0
-  ) {
-    return null;
-  }
-
-  const bounds =
-    getCombinedBounds(
-      nodes,
-    );
-
-  if (
-    bounds.isEmpty()
-  ) {
-    return null;
-  }
-
-  return bounds.getCenter(
-    new Vector3(),
-  );
-}
-
-function getInteractionRadius(
-  nodes: Object3D[],
-): number {
-  if (
-    nodes.length === 0
-  ) {
+function getInteractionRadius(nodes: Object3D[]): number {
+  if (nodes.length === 0) {
     return 0.18;
   }
 
-  const bounds =
-    getCombinedBounds(
-      nodes,
-    );
+  const bounds = getCombinedBounds(nodes);
 
-  if (
-    bounds.isEmpty()
-  ) {
+  if (bounds.isEmpty()) {
     return 0.18;
   }
 
-  const size =
-    bounds.getSize(
-      new Vector3(),
-    );
+  const size = bounds.getSize(new Vector3());
 
   return Math.min(
-    Math.max(
-      size.length() * 0.28,
-      0.18,
-    ),
+    Math.max(size.length() * 0.28, 0.18),
     0.48,
   );
 }
 
-function getWorldTransform(
-  node: Object3D,
-): OriginalWorldTransform {
-  const position =
-    new Vector3();
-
-  const quaternion =
-    new Quaternion();
-
-  const scale =
-    new Vector3();
-
-  node.getWorldPosition(
-    position,
-  );
-
-  node.getWorldQuaternion(
-    quaternion,
-  );
-
-  node.getWorldScale(
-    scale,
-  );
-
-  return {
-    node,
-    position,
-    quaternion,
-    scale,
-  };
-}
-
-function applyWorldTransform(
-  transform: OriginalWorldTransform,
-  position: Vector3,
-  quaternion: Quaternion,
-) {
-  const node =
-    transform.node;
-
-  const parent =
-    node.parent;
-
-  if (!parent) {
-    return;
+function normalizeAngle(angle: number): number {
+  if (angle > Math.PI) {
+    return angle - Math.PI * 2;
   }
 
-  const parentWorldQuaternion =
-    new Quaternion();
-
-  const parentWorldPosition =
-    new Vector3();
-
-  const parentWorldScale =
-    new Vector3();
-
-  parent.getWorldQuaternion(
-    parentWorldQuaternion,
-  );
-
-  parent.getWorldPosition(
-    parentWorldPosition,
-  );
-
-  parent.getWorldScale(
-    parentWorldScale,
-  );
-
-  const inverseParentQuaternion =
-    parentWorldQuaternion
-      .clone()
-      .invert();
-
-  const localPosition =
-    position
-      .clone()
-      .sub(
-        parentWorldPosition,
-      );
-
-  localPosition.applyQuaternion(
-    inverseParentQuaternion,
-  );
-
-  localPosition.divide(
-    parentWorldScale,
-  );
-
-  const localQuaternion =
-    inverseParentQuaternion
-      .clone()
-      .multiply(
-        quaternion,
-      );
-
-  node.position.copy(
-    localPosition,
-  );
-
-  node.quaternion.copy(
-    localQuaternion,
-  );
-
-  node.scale.copy(
-    transform.scale,
-  );
-}
-
-function normalizeAngle(
-  angle: number,
-): number {
-  if (
-    angle > Math.PI
-  ) {
-    return (
-      angle -
-      Math.PI * 2
-    );
-  }
-
-  if (
-    angle < -Math.PI
-  ) {
-    return (
-      angle +
-      Math.PI * 2
-    );
+  if (angle < -Math.PI) {
+    return angle + Math.PI * 2;
   }
 
   return angle;
@@ -293,126 +103,48 @@ function normalizeAngle(
 export function SteeringWheelInteraction({
   scene,
 }: SteeringWheelInteractionProps) {
-  const { camera, gl } =
-    useThree();
+  const { camera, gl } = useThree();
 
-  const [
-    hovered,
-    setHovered,
-  ] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   const nodes = useMemo(
-    () =>
-      getRequiredNodes(
-        scene,
-      ),
+    () => getRequiredNodes(scene),
     [scene],
   );
 
-  const wheelNode =
-    useMemo(
-      () =>
-        scene.getObjectByName(
-          "car_steeringwheel",
-        ),
-      [scene],
-    );
+  const wheelNode = useMemo(
+    () => scene.getObjectByName("car_steeringwheel"),
+    [scene],
+  );
 
-  const center = useMemo(
-    () =>
-      getWorldCenter(
-        nodes,
-      ),
+  const interactionRadius = useMemo(
+    () => getInteractionRadius(nodes),
     [nodes],
   );
 
-  const interactionRadius =
-    useMemo(
-      () =>
-        getInteractionRadius(
-          nodes,
-        ),
-      [nodes],
-    );
+  const markerGroupRef = useRef<Group | null>(null);
+  const nodeParentRef = useRef<Object3D | null>(null);
+  const originalTransformsRef = useRef<OriginalLocalTransform[]>([]);
 
-  /**
-   * Marker is placed above the
-   * steering wheel center.
-   */
-  const markerPosition =
-    useMemo(
-      () => {
-        if (!center) {
-          return null;
-        }
+  const centerLocalRef = useRef(new Vector3());
+  const centerWorldRef = useRef(new Vector3());
+  const markerWorldRef = useRef(new Vector3());
+  const projectedCenterRef = useRef({ x: 0, y: 0 });
+  const steeringAxisLocalRef = useRef(new Vector3(1, 0, 0));
 
-        return center
-          .clone()
-          .add(
-            new Vector3(
-              0,
-              interactionRadius *
-                1.15,
-              0,
-            ),
-          );
-      },
-      [
-        center,
-        interactionRadius,
-      ],
-    );
-
-  const originalTransformsRef =
-    useRef<
-      OriginalWorldTransform[]
-    >([]);
-
-  const centerRef =
-    useRef(
-      new Vector3(),
-    );
-
-  const screenCenterRef =
-    useRef({
-      x: 0,
-      y: 0,
-    });
-
-  const steeringAxisRef =
-    useRef(
-      new Vector3(),
-    );
-
-  const targetRotationRef =
-    useRef(0);
-
-  const currentRotationRef =
-    useRef(0);
-
-  const draggingRef =
-    useRef(false);
-
-  const lastPointerAngleRef =
-    useRef<number | null>(
-      null,
-    );
-
-  const readyRef =
-    useRef(false);
+  const targetRotationRef = useRef(0);
+  const currentRotationRef = useRef(0);
+  const draggingRef = useRef(false);
+  const lastPointerAngleRef = useRef<number | null>(null);
+  const readyRef = useRef(false);
 
   useEffect(() => {
-    if (
-      nodes.length !==
-      STEERING_WHEEL_NODES.length
-    ) {
+    readyRef.current = false;
+
+    if (nodes.length !== STEERING_WHEEL_NODES.length) {
       console.warn(
         "[VELOTHERM] Steering wheel interaction nodes are incomplete.",
       );
-
-      readyRef.current =
-        false;
-
       return;
     }
 
@@ -420,425 +152,244 @@ export function SteeringWheelInteraction({
       console.warn(
         "[VELOTHERM] Steering wheel node not found.",
       );
-
-      readyRef.current =
-        false;
-
       return;
     }
 
-    const parent =
-      wheelNode.parent;
+    const parent = wheelNode.parent;
 
-    if (!parent) {
+    if (!parent || nodes.some((node) => node.parent !== parent)) {
       console.warn(
-        "[VELOTHERM] Steering wheel parent not found.",
+        "[VELOTHERM] Steering wheel components must share the same GLB parent.",
       );
-
-      readyRef.current =
-        false;
-
       return;
     }
 
-    const differentParent =
-      nodes.some(
-        (node) =>
-          node.parent !==
-          parent,
-      );
+    scene.updateWorldMatrix(true, true);
 
-    if (
-      differentParent
-    ) {
+    const bounds = getCombinedBounds(nodes);
+
+    if (bounds.isEmpty()) {
       console.warn(
-        "[VELOTHERM] Steering wheel nodes do not share the same parent.",
+        "[VELOTHERM] Steering wheel bounds could not be calculated.",
       );
-
-      readyRef.current =
-        false;
-
       return;
     }
 
-    const nextTransforms =
-      nodes.map(
-        getWorldTransform,
-      );
+    const centerWorld = bounds.getCenter(new Vector3());
+    const centerLocal = parent.worldToLocal(centerWorld.clone());
 
-    const bounds =
-      getCombinedBounds(
-        nodes,
-      );
+    const axisLocal = STEERING_AXIS
+      .clone()
+      .applyQuaternion(wheelNode.quaternion)
+      .normalize();
 
-    if (
-      bounds.isEmpty()
-    ) {
-      readyRef.current =
-        false;
+    originalTransformsRef.current = nodes.map((node) => ({
+      node,
+      position: node.position.clone(),
+      quaternion: node.quaternion.clone(),
+      scale: node.scale.clone(),
+    }));
 
-      return;
-    }
+    nodeParentRef.current = parent;
+    centerLocalRef.current.copy(centerLocal);
+    centerWorldRef.current.copy(centerWorld);
+    steeringAxisLocalRef.current.copy(axisLocal);
 
-    const worldCenter =
-      bounds.getCenter(
-        new Vector3(),
-      );
-
-    const wheelWorldQuaternion =
-      new Quaternion();
-
-    wheelNode.getWorldQuaternion(
-      wheelWorldQuaternion,
-    );
-
-    const steeringAxis =
-      STEERING_AXIS
-        .clone()
-        .applyQuaternion(
-          wheelWorldQuaternion,
-        )
-        .normalize();
-
-    originalTransformsRef.current =
-      nextTransforms;
-
-    centerRef.current.copy(
-      worldCenter,
-    );
-
-    steeringAxisRef.current.copy(
-      steeringAxis,
-    );
-
-    targetRotationRef.current =
-      0;
-
-    currentRotationRef.current =
-      0;
-
-    lastPointerAngleRef.current =
-      null;
-
-    readyRef.current =
-      true;
+    targetRotationRef.current = 0;
+    currentRotationRef.current = 0;
+    lastPointerAngleRef.current = null;
+    readyRef.current = true;
 
     return () => {
-      for (
-        const transform of
-          originalTransformsRef.current
-      ) {
-        applyWorldTransform(
-          transform,
-          transform.position,
-          transform.quaternion,
-        );
+      for (const transform of originalTransformsRef.current) {
+        transform.node.position.copy(transform.position);
+        transform.node.quaternion.copy(transform.quaternion);
+        transform.node.scale.copy(transform.scale);
       }
 
-      originalTransformsRef.current =
-        [];
-
-      readyRef.current =
-        false;
+      originalTransformsRef.current = [];
+      nodeParentRef.current = null;
+      readyRef.current = false;
+      draggingRef.current = false;
+      lastPointerAngleRef.current = null;
+      document.body.style.cursor = "";
     };
-  }, [
-    nodes,
-    wheelNode,
-  ]);
+  }, [nodes, scene, wheelNode]);
 
-  useFrame(() => {
-    if (
-      !readyRef.current
-    ) {
+  useFrame((_, delta) => {
+    if (!readyRef.current) {
       return;
     }
 
-    const transforms =
-      originalTransformsRef.current;
+    const parent = nodeParentRef.current;
+    const transforms = originalTransformsRef.current;
 
-    if (
-      transforms.length ===
-      0
-    ) {
+    if (!parent || transforms.length === 0) {
       return;
     }
 
-    /**
-     * Project the actual steering
-     * wheel center into screen space.
-     */
-    const projectedCenter =
-      centerRef.current
-        .clone()
-        .project(camera);
+    currentRotationRef.current = MathUtils.damp(
+      currentRotationRef.current,
+      targetRotationRef.current,
+      12,
+      delta,
+    );
 
-    const canvas =
-      gl.domElement;
+    const deltaQuaternion = new Quaternion().setFromAxisAngle(
+      steeringAxisLocalRef.current,
+      currentRotationRef.current,
+    );
 
-    const rect =
-      canvas.getBoundingClientRect();
+    const centerLocal = centerLocalRef.current;
 
-    screenCenterRef.current.x =
-      rect.left +
-      ((projectedCenter.x + 1) /
-        2) *
-        rect.width;
+    for (const transform of transforms) {
+      transform.node.position
+        .copy(transform.position)
+        .sub(centerLocal)
+        .applyQuaternion(deltaQuaternion)
+        .add(centerLocal);
 
-    screenCenterRef.current.y =
-      rect.top +
-      ((-projectedCenter.y + 1) /
-        2) *
-        rect.height;
+      transform.node.quaternion
+        .copy(deltaQuaternion)
+        .multiply(transform.quaternion);
 
-    currentRotationRef.current =
-      MathUtils.damp(
-        currentRotationRef.current,
-        targetRotationRef.current,
-        12,
-        1 / 60,
-      );
+      transform.node.scale.copy(transform.scale);
+    }
 
-    const deltaQuaternion =
-      new Quaternion().setFromAxisAngle(
-        steeringAxisRef.current,
-        currentRotationRef.current,
-      );
+    scene.updateWorldMatrix(true, true);
+    parent.updateWorldMatrix(true, false);
 
-    for (
-      const transform of
-        transforms
-    ) {
-      const relativePosition =
-        transform.position
-          .clone()
-          .sub(
-            centerRef.current,
-          );
+    centerWorldRef.current
+      .copy(centerLocal)
+      .applyMatrix4(parent.matrixWorld);
 
-      relativePosition.applyQuaternion(
-        deltaQuaternion,
-      );
+    const projectedCenter = centerWorldRef.current
+      .clone()
+      .project(camera);
 
-      const nextPosition =
-        centerRef.current
-          .clone()
-          .add(
-            relativePosition,
-          );
+    const rect = gl.domElement.getBoundingClientRect();
 
-      const nextQuaternion =
-        deltaQuaternion
-          .clone()
-          .multiply(
-            transform.quaternion,
-          );
+    projectedCenterRef.current.x =
+      rect.left + ((projectedCenter.x + 1) / 2) * rect.width;
 
-      applyWorldTransform(
-        transform,
-        nextPosition,
-        nextQuaternion,
-      );
+    projectedCenterRef.current.y =
+      rect.top + ((-projectedCenter.y + 1) / 2) * rect.height;
+
+    const markerGroup = markerGroupRef.current;
+    const markerParent = markerGroup?.parent;
+
+    if (markerGroup && markerParent) {
+      markerParent.updateWorldMatrix(true, false);
+
+      markerWorldRef.current
+        .copy(centerLocal)
+        .add(new Vector3(0, interactionRadius * 1.15, 0))
+        .applyMatrix4(parent.matrixWorld);
+
+      markerParent.worldToLocal(markerWorldRef.current);
+      markerGroup.position.copy(markerWorldRef.current);
     }
   });
 
-  const getPointerAngle =
-    useCallback(
-      (
-        clientX: number,
-        clientY: number,
-      ) => {
-        const centerX =
-          screenCenterRef.current.x;
-
-        const centerY =
-          screenCenterRef.current.y;
-
-        return Math.atan2(
-          clientY - centerY,
-          clientX - centerX,
-        );
-      },
-      [],
+  const getPointerAngle = useCallback((clientX: number, clientY: number) => {
+    return Math.atan2(
+      clientY - projectedCenterRef.current.y,
+      clientX - projectedCenterRef.current.x,
     );
+  }, []);
 
-  const handleWindowPointerMove =
-    useCallback(
-      (
-        event: PointerEvent,
-      ) => {
-        if (
-          !draggingRef.current
-        ) {
-          return;
-        }
-
-        const previousAngle =
-          lastPointerAngleRef.current;
-
-        if (
-          previousAngle === null
-        ) {
-          lastPointerAngleRef.current =
-            getPointerAngle(
-              event.clientX,
-              event.clientY,
-            );
-
-          return;
-        }
-
-        const currentAngle =
-          getPointerAngle(
-            event.clientX,
-            event.clientY,
-          );
-
-        const deltaAngle =
-          normalizeAngle(
-            currentAngle -
-              previousAngle,
-          );
-
-        lastPointerAngleRef.current =
-          currentAngle;
-
-        targetRotationRef.current =
-          MathUtils.clamp(
-            targetRotationRef.current +
-              deltaAngle *
-                STEERING_DIRECTION,
-            -MAX_STEERING_ROTATION,
-            MAX_STEERING_ROTATION,
-          );
-      },
-      [
-        getPointerAngle,
-      ],
-    );
-
-  const handleWindowPointerUp =
-    useCallback(() => {
-      draggingRef.current =
-        false;
-
-      lastPointerAngleRef.current =
-        null;
-
-      document.body.style.cursor =
-        hovered
-          ? "grab"
-          : "";
-    }, [hovered]);
-
-  useEffect(() => {
-    window.addEventListener(
-      "pointermove",
-      handleWindowPointerMove,
-    );
-
-    window.addEventListener(
-      "pointerup",
-      handleWindowPointerUp,
-    );
-
-    window.addEventListener(
-      "pointercancel",
-      handleWindowPointerUp,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "pointermove",
-        handleWindowPointerMove,
-      );
-
-      window.removeEventListener(
-        "pointerup",
-        handleWindowPointerUp,
-      );
-
-      window.removeEventListener(
-        "pointercancel",
-        handleWindowPointerUp,
-      );
-
-      document.body.style.cursor =
-        "";
-    };
-  }, [
-    handleWindowPointerMove,
-    handleWindowPointerUp,
-  ]);
-
-  const handlePointerDown =
-    (
-      event: ThreeEvent<PointerEvent>,
-    ) => {
-      event.stopPropagation();
-
-      if (
-        !readyRef.current
-      ) {
+  const handleWindowPointerMove = useCallback(
+    (event: PointerEvent) => {
+      if (!draggingRef.current) {
         return;
       }
 
-      lastPointerAngleRef.current =
-        getPointerAngle(
-          event.nativeEvent.clientX,
-          event.nativeEvent.clientY,
+      const previousAngle = lastPointerAngleRef.current;
+
+      if (previousAngle === null) {
+        lastPointerAngleRef.current = getPointerAngle(
+          event.clientX,
+          event.clientY,
         );
-
-      draggingRef.current =
-        true;
-
-      document.body.style.cursor =
-        "grabbing";
-    };
-
-  const handlePointerOver =
-    (
-      event: ThreeEvent<PointerEvent>,
-    ) => {
-      event.stopPropagation();
-
-      setHovered(true);
-
-      if (
-        !draggingRef.current
-      ) {
-        document.body.style.cursor =
-          "grab";
+        return;
       }
+
+      const currentAngle = getPointerAngle(
+        event.clientX,
+        event.clientY,
+      );
+
+      const deltaAngle = normalizeAngle(
+        currentAngle - previousAngle,
+      );
+
+      lastPointerAngleRef.current = currentAngle;
+
+      targetRotationRef.current = MathUtils.clamp(
+        targetRotationRef.current +
+          deltaAngle * STEERING_DIRECTION,
+        -MAX_STEERING_ROTATION,
+        MAX_STEERING_ROTATION,
+      );
+    },
+    [getPointerAngle],
+  );
+
+  const handleWindowPointerUp = useCallback(() => {
+    draggingRef.current = false;
+    lastPointerAngleRef.current = null;
+    document.body.style.cursor = hovered ? "grab" : "";
+  }, [hovered]);
+
+  useEffect(() => {
+    window.addEventListener("pointermove", handleWindowPointerMove);
+    window.addEventListener("pointerup", handleWindowPointerUp);
+    window.addEventListener("pointercancel", handleWindowPointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerUp);
+      window.removeEventListener("pointercancel", handleWindowPointerUp);
+      document.body.style.cursor = "";
     };
+  }, [handleWindowPointerMove, handleWindowPointerUp]);
 
-  const handlePointerOut =
-    (
-      event: ThreeEvent<PointerEvent>,
-    ) => {
-      event.stopPropagation();
+  const handlePointerDown = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
 
-      setHovered(false);
+    if (!readyRef.current) {
+      return;
+    }
 
-      if (
-        !draggingRef.current
-      ) {
-        document.body.style.cursor =
-          "";
-      }
-    };
+    lastPointerAngleRef.current = getPointerAngle(
+      event.nativeEvent.clientX,
+      event.nativeEvent.clientY,
+    );
 
-  if (
-    !center ||
-    !markerPosition
-  ) {
-    return null;
-  }
+    draggingRef.current = true;
+    document.body.style.cursor = "grabbing";
+  };
+
+  const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    setHovered(true);
+
+    if (!draggingRef.current) {
+      document.body.style.cursor = "grab";
+    }
+  };
+
+  const handlePointerOut = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    setHovered(false);
+
+    if (!draggingRef.current) {
+      document.body.style.cursor = "";
+    }
+  };
 
   return (
-    <group
-      position={markerPosition}
-      renderOrder={1200}
-    >
+    <group ref={markerGroupRef} renderOrder={1200}>
       <Billboard
         follow
         lockX={false}
@@ -847,25 +398,12 @@ export function SteeringWheelInteraction({
       >
         <group>
           <mesh
-            onPointerDown={
-              handlePointerDown
-            }
-            onPointerOver={
-              handlePointerOver
-            }
-            onPointerOut={
-              handlePointerOut
-            }
+            onPointerDown={handlePointerDown}
+            onPointerOver={handlePointerOver}
+            onPointerOut={handlePointerOut}
             renderOrder={1200}
           >
-            <circleGeometry
-              args={[
-                interactionRadius *
-                  0.55,
-                32,
-              ]}
-            />
-
+            <circleGeometry args={[interactionRadius * 0.55, 32]} />
             <meshBasicMaterial
               transparent
               opacity={0}
@@ -874,31 +412,18 @@ export function SteeringWheelInteraction({
             />
           </mesh>
 
-          <mesh
-            renderOrder={1201}
-          >
+          <mesh renderOrder={1201}>
             <ringGeometry
               args={[
-                interactionRadius *
-                  0.08,
-                interactionRadius *
-                  0.095,
+                interactionRadius * 0.08,
+                interactionRadius * 0.095,
                 24,
               ]}
             />
-
             <meshBasicMaterial
-              color={
-                hovered
-                  ? "#22d3ee"
-                  : "#94a3b8"
-              }
+              color={hovered ? "#22d3ee" : "#94a3b8"}
               transparent
-              opacity={
-                hovered
-                  ? 0.85
-                  : 0.35
-              }
+              opacity={hovered ? 0.85 : 0.35}
               depthTest={false}
               depthWrite={false}
             />

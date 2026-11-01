@@ -197,7 +197,7 @@ export function Scene03PistonWork() {
                 Work
               </TechnicalLabel>
 
-              <span className="font-[var(--font-jetbrains-mono)] text-[9px] text-slate-500">
+              <span className="font-[var(--font-jetbrains-mono)] text-sm font-semibold text-slate-300 sm:text-base">
                 W = FΔs
               </span>
             </div>
@@ -214,7 +214,7 @@ export function Scene03PistonWork() {
               </span>
             </div>
 
-            <p className="mt-3 font-[var(--font-jetbrains-mono)] text-[9px] text-slate-500">
+            <p className="mt-3 font-[var(--font-jetbrains-mono)] text-xs text-slate-400 sm:text-sm">
               = {forceN} ×{" "}
               {displacementM.toFixed(
                 2,
@@ -413,14 +413,12 @@ export function Scene03PistonWork() {
           1.15,
           -2.13,
         ]}
-
         engineRunning={
           isPlaying
         }
         enginePlaybackRate={
           playbackRate
         }
-
         engineOverlay={
           <PistonWorkVisualization
             forceN={forceN}

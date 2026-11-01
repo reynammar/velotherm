@@ -710,10 +710,6 @@ export function Scene04PVWork() {
       }
       bottomContent={
         <div className="grid w-full gap-2 lg:grid-cols-[0.72fr_1.9fr_auto]">
-          {/* =================================================
-              WORK
-          ================================================= */}
-
           <Panel
             variant="dark"
             className="h-fit border-slate-700/80 bg-slate-950/78 p-3 backdrop-blur-md sm:p-4"
@@ -734,14 +730,10 @@ export function Scene04PVWork() {
               </span>
             </div>
 
-            <span className="mt-2 block font-[var(--font-jetbrains-mono)] text-[8px] text-slate-500">
+            <span className="mt-3 block font-[var(--font-jetbrains-mono)] text-base font-semibold text-slate-300 sm:text-lg">
               W = ∫ P dV
             </span>
           </Panel>
-
-          {/* =================================================
-              PARAMETERS
-          ================================================= */}
 
           <Panel
             variant="dark"
@@ -809,10 +801,6 @@ export function Scene04PVWork() {
               />
             </div>
           </Panel>
-
-          {/* =================================================
-              ACTIONS
-          ================================================= */}
 
           <Panel
             variant="dark"
@@ -916,11 +904,6 @@ export function Scene04PVWork() {
         />
       </SimulationCanvas>
 
-      {/* =====================================================
-          DESKTOP GRAPH
-          ≥ 1280px
-      ===================================================== */}
-
       <div className="pointer-events-none absolute right-4 top-[7.5rem] z-30 hidden min-[1280px]:block">
         <div className="pointer-events-auto w-[350px] border border-slate-700/90 bg-slate-950/90 p-3 shadow-2xl backdrop-blur-xl xl:w-[380px]">
           <div className="mb-2 flex items-center justify-between gap-3">
@@ -942,15 +925,6 @@ export function Scene04PVWork() {
           />
         </div>
       </div>
-
-      {/* =====================================================
-          TABLET / MOBILE GRAPH TRIGGER
-          
-          LEFT LOWER ZONE
-          Keeps distance from:
-          - scene sidebar on right
-          - control button on right
-      ===================================================== */}
 
       {!graphOpen && (
         <div className="absolute bottom-[148px] left-3 z-[55] min-[1280px]:hidden sm:bottom-[132px] sm:left-5">
@@ -977,16 +951,6 @@ export function Scene04PVWork() {
         </div>
       )}
 
-      {/* =====================================================
-          TABLET / MOBILE GRAPH OVERLAY
-          
-          Important:
-          - centered vertically
-          - no overflow-hidden around the SVG
-          - full graph remains visible
-          - panel itself is constrained, not the graph
-      ===================================================== */}
-
       {graphOpen && (
         <>
           <button
@@ -1006,8 +970,6 @@ export function Scene04PVWork() {
                   "var(--clip-chamfer-sm)",
               }}
             >
-              {/* HEADER */}
-
               <div className="mb-1.5 flex items-center justify-between gap-3">
                 <TechnicalLabel accent="cyan">
                   P–V Diagram
@@ -1027,8 +989,6 @@ export function Scene04PVWork() {
                 </button>
               </div>
 
-              {/* GRAPH */}
-
               <div className="w-full">
                 <PVGraph
                   p1KPa={p1KPa}
@@ -1040,8 +1000,6 @@ export function Scene04PVWork() {
                   }
                 />
               </div>
-
-              {/* CURRENT STATE */}
 
               <div className="mt-2 grid grid-cols-2 gap-1.5 border-t border-slate-800 pt-2">
                 <MiniState

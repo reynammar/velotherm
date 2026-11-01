@@ -103,13 +103,6 @@ export function Scene08EngineEnergyConversion() {
       ],
     );
 
-  /**
-   * Vehicle motion is derived from the
-   * calculated electrical output.
-   *
-   * This makes the visual feedback respond
-   * directly to the experiment parameters.
-   */
   const vehicleMotion =
     useMemo(
       () =>
@@ -123,10 +116,6 @@ export function Scene08EngineEnergyConversion() {
       ],
     );
 
-  /**
-   * Engine playback follows the same output
-   * power intensity as the vehicle motion.
-   */
   const playbackRate =
     running
       ? 0.65 +
@@ -210,8 +199,6 @@ export function Scene08EngineEnergyConversion() {
           }}
         >
           <div className="flex items-center gap-3 sm:gap-4">
-            {/* SPEED */}
-
             <div>
               <span className="block font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-[0.14em] text-slate-500 sm:text-[8px]">
                 Lab Speed
@@ -229,8 +216,6 @@ export function Scene08EngineEnergyConversion() {
 
             <span className="h-7 w-px bg-slate-700" />
 
-            {/* OUTPUT */}
-
             <div>
               <span className="block font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-[0.14em] text-slate-500 sm:text-[8px]">
                 Output
@@ -247,8 +232,6 @@ export function Scene08EngineEnergyConversion() {
             </div>
 
             <span className="h-7 w-px bg-slate-700" />
-
-            {/* STATE */}
 
             <div>
               <span className="block font-[var(--font-chakra-petch)] text-[7px] uppercase tracking-[0.14em] text-slate-500 sm:text-[8px]">
@@ -275,10 +258,6 @@ export function Scene08EngineEnergyConversion() {
       }
       bottomContent={
         <div className="grid w-full gap-2 lg:grid-cols-[0.82fr_1.8fr_auto]">
-          {/* =================================================
-              OUTPUT
-          ================================================= */}
-
           <Panel
             variant="dark"
             className="h-fit border-slate-700/80 bg-slate-950/80 p-3 backdrop-blur-md sm:p-4"
@@ -306,11 +285,11 @@ export function Scene08EngineEnergyConversion() {
             </div>
 
             <div className="mt-3 border-t border-slate-800 pt-3">
-              <span className="block font-[var(--font-jetbrains-mono)] text-[8px] text-slate-500">
+              <span className="block font-[var(--font-jetbrains-mono)] text-base font-semibold text-slate-200 sm:text-lg">
                 Pout = Pin × η
               </span>
 
-              <span className="mt-1 block font-[var(--font-jetbrains-mono)] text-[8px] text-slate-400">
+              <span className="mt-2 block font-[var(--font-jetbrains-mono)] text-xs text-slate-300 sm:text-sm">
                 {inputPowerKw.toFixed(
                   0,
                 )}{" "}
@@ -322,8 +301,6 @@ export function Scene08EngineEnergyConversion() {
                 %
               </span>
             </div>
-
-            {/* VISUAL SPEED */}
 
             <div className="mt-3 border-t border-slate-800 pt-3">
               <span className="block font-[var(--font-chakra-petch)] text-[8px] uppercase tracking-[0.12em] text-slate-500">
@@ -344,10 +321,6 @@ export function Scene08EngineEnergyConversion() {
             </div>
           </Panel>
 
-          {/* =================================================
-              EXPERIMENT
-          ================================================= */}
-
           <Panel
             variant="dark"
             className="h-fit border-slate-700/80 bg-slate-950/80 p-3 backdrop-blur-md sm:p-4"
@@ -356,8 +329,6 @@ export function Scene08EngineEnergyConversion() {
               Conversion Experiment
             </TechnicalLabel>
 
-            {/* INPUT POWER */}
-
             <div className="mt-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-[var(--font-chakra-petch)] text-[9px] font-semibold uppercase tracking-wide text-slate-400">
@@ -365,8 +336,7 @@ export function Scene08EngineEnergyConversion() {
                 </span>
 
                 <span className="font-[var(--font-jetbrains-mono)] text-[8px] text-white">
-                  {inputPowerKw}{" "}
-                  kW
+                  {inputPowerKw} kW
                 </span>
               </div>
 
@@ -375,24 +345,17 @@ export function Scene08EngineEnergyConversion() {
                 min={20}
                 max={120}
                 step={5}
-                value={
-                  inputPowerKw
-                }
-                onChange={(
-                  event,
-                ) =>
+                value={inputPowerKw}
+                onChange={(event) =>
                   setInputPowerKw(
                     Number(
-                      event.target
-                        .value,
+                      event.target.value,
                     ),
                   )
                 }
                 className="mt-2 w-full accent-[var(--color-brand-red)]"
               />
             </div>
-
-            {/* EFFICIENCY */}
 
             <div className="mt-3">
               <div className="flex items-center justify-between gap-2">
@@ -401,13 +364,7 @@ export function Scene08EngineEnergyConversion() {
                 </span>
 
                 <span className="font-[var(--font-jetbrains-mono)] text-[8px] text-white">
-                  {(
-                    efficiency *
-                    100
-                  ).toFixed(
-                    0,
-                  )}
-                  %
+                  {(efficiency * 100).toFixed(0)}%
                 </span>
               </div>
 
@@ -416,24 +373,17 @@ export function Scene08EngineEnergyConversion() {
                 min={0.5}
                 max={0.95}
                 step={0.01}
-                value={
-                  efficiency
-                }
-                onChange={(
-                  event,
-                ) =>
+                value={efficiency}
+                onChange={(event) =>
                   setEfficiency(
                     Number(
-                      event.target
-                        .value,
+                      event.target.value,
                     ),
                   )
                 }
                 className="mt-2 w-full accent-[var(--color-brand-red)]"
               />
             </div>
-
-            {/* COMPONENT SELECTOR */}
 
             <div className="mt-4 border-t border-slate-800 pt-3">
               <TechnicalLabel>
@@ -442,18 +392,14 @@ export function Scene08EngineEnergyConversion() {
 
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {COMPONENTS.map(
-                  (
-                    component,
-                  ) => {
+                  (component) => {
                     const active =
                       selectedHybridComponent ===
                       component.id;
 
                     return (
                       <button
-                        key={
-                          component.id
-                        }
+                        key={component.id}
                         type="button"
                         onClick={() =>
                           handleComponentButton(
@@ -467,14 +413,10 @@ export function Scene08EngineEnergyConversion() {
                           active
                             ? "border-cyan-400 bg-cyan-500/15 text-cyan-300"
                             : "border-slate-700 bg-slate-900/55 text-slate-400 hover:border-slate-500 hover:text-white",
-                        ].join(
-                          " ",
-                        )}
+                        ].join(" ")}
                       >
                         <span className="block truncate">
-                          {
-                            component.label
-                          }
+                          {component.label}
                         </span>
                       </button>
                     );
@@ -483,10 +425,6 @@ export function Scene08EngineEnergyConversion() {
               </div>
             </div>
           </Panel>
-
-          {/* =================================================
-              SYSTEM
-          ================================================= */}
 
           <Panel
             variant="dark"
@@ -499,47 +437,32 @@ export function Scene08EngineEnergyConversion() {
             <div className="mt-3 space-y-2">
               <Readout
                 label="Input"
-                value={`${conversion.inputPowerKw.toFixed(
-                  1,
-                )} kW`}
+                value={`${conversion.inputPowerKw.toFixed(1)} kW`}
               />
 
               <Readout
                 label="Output"
-                value={`${conversion.outputPowerKw.toFixed(
-                  1,
-                )} kW`}
+                value={`${conversion.outputPowerKw.toFixed(1)} kW`}
               />
 
               <Readout
                 label="Loss"
-                value={`${conversion.lossPowerKw.toFixed(
-                  1,
-                )} kW`}
+                value={`${conversion.lossPowerKw.toFixed(1)} kW`}
               />
 
               <Readout
                 label="Efficiency"
-                value={`${(
-                  conversion.efficiency *
-                  100
-                ).toFixed(
-                  0,
-                )}%`}
+                value={`${(conversion.efficiency * 100).toFixed(0)}%`}
               />
 
               <Readout
                 label="Lab Speed"
-                value={`${vehicleMotion.speedKmh.toFixed(
-                  0,
-                )} km/h`}
+                value={`${vehicleMotion.speedKmh.toFixed(0)} km/h`}
               />
 
               <Readout
                 label="Wheel Motion"
-                value={`${vehicleMotion.wheelAngularVelocity.toFixed(
-                  2,
-                )} rad/s`}
+                value={`${vehicleMotion.wheelAngularVelocity.toFixed(2)} rad/s`}
               />
             </div>
 
@@ -548,22 +471,16 @@ export function Scene08EngineEnergyConversion() {
                 type="button"
                 size="sm"
                 variant="primary"
-                onClick={
-                  handleToggleRun
-                }
+                onClick={handleToggleRun}
               >
-                {running
-                  ? "Pause"
-                  : "Run System"}
+                {running ? "Pause" : "Run System"}
               </Button>
 
               <Button
                 type="button"
                 size="sm"
                 variant="secondary"
-                onClick={
-                  handleReset
-                }
+                onClick={handleReset}
               >
                 Reset
               </Button>
@@ -572,9 +489,7 @@ export function Scene08EngineEnergyConversion() {
             {selectedComponent && (
               <button
                 type="button"
-                onClick={
-                  handleExitFocus
-                }
+                onClick={handleExitFocus}
                 className="mt-2 w-full border border-slate-700 px-2 py-2 font-[var(--font-chakra-petch)] text-[7px] font-semibold uppercase tracking-[0.12em] text-slate-400 transition-colors hover:border-slate-500 hover:text-white"
               >
                 Exit Component Focus
@@ -586,9 +501,7 @@ export function Scene08EngineEnergyConversion() {
     >
       <SimulationCanvas
         fullScreen
-        resetKey={
-          resetKey
-        }
+        resetKey={resetKey}
         cameraPosition={[
           5.4,
           2.25,
@@ -599,46 +512,30 @@ export function Scene08EngineEnergyConversion() {
           1.1,
           -2.13,
         ]}
-        cameraFocus={
-          selectedComponent
-        }
+        cameraFocus={selectedComponent}
         angularVelocity={
           vehicleMotion.wheelAngularVelocity
         }
         motionSpeedMs={
           vehicleMotion.roadSpeedMps
         }
-        engineRunning={
-          running
-        }
-        enginePlaybackRate={
-          playbackRate
-        }
+        engineRunning={running}
+        enginePlaybackRate={playbackRate}
         hybrid={{
           inputPowerKw:
             conversion.inputPowerKw,
-
           efficiency:
             conversion.efficiency,
-
           running,
-
           activeComponent:
             selectedHybridComponent,
-
-          onSelect:
-            handleSelect,
-
+          onSelect: handleSelect,
           resetKey,
         }}
       >
         <EngineMechanism
-          isPlaying={
-            running
-          }
-          playbackRate={
-            playbackRate
-          }
+          isPlaying={running}
+          playbackRate={playbackRate}
         />
       </SimulationCanvas>
     </SimulationShell>

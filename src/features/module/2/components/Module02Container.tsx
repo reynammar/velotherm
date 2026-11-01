@@ -13,23 +13,23 @@ import { Scene07FirstLaw } from "../scenes/Scene07FirstLaw";
 const SCENES = [
   {
     id: "piston-work",
-    label: "03 · Piston Work",
+    label: "04 · Piston Work",
   },
   {
     id: "pv-work",
-    label: "04 · P–V Work",
+    label: "05 · P–V Work",
   },
   {
     id: "power-rotation",
-    label: "05 · Power",
+    label: "06 · Power",
   },
   {
     id: "heat-internal-energy",
-    label: "06 · Heat & Energy",
+    label: "07 · Heat & Energy",
   },
   {
     id: "first-law",
-    label: "07 · First Law",
+    label: "08 · First Law",
   },
 ];
 

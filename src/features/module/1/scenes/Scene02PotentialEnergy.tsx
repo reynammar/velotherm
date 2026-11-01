@@ -606,6 +606,16 @@ export function Scene02PotentialEnergy() {
                 }}
               />
             </div>
+
+            <div className="mt-4 border-t border-slate-700 pt-3">
+              <span className="block font-[var(--font-jetbrains-mono)] text-base font-semibold text-slate-200 sm:text-lg">
+                PE = mgh
+              </span>
+
+              <p className="mt-2 font-[var(--font-jetbrains-mono)] text-xs text-slate-400 sm:text-sm">
+                = {massKg} × {STANDARD_GRAVITY.toFixed(2)} × {currentHeightM.toFixed(1)}
+              </p>
+            </div>
           </Panel>
 
           <Panel

@@ -25,19 +25,19 @@ const SCENES = [
     id:
       "engine-energy-conversion",
     label:
-      "08 · Engine Energy Conversion",
+      "09 · Engine Energy Conversion",
   },
   {
     id:
       "internal-engine-ar",
     label:
-      "09 · Cycles & Efficiency",
+      "10 · Cycles & Efficiency",
   },
   {
     id:
       "vehicle-engineering-lab",
     label:
-      "10 · Vehicle Engineering Lab",
+      "11 · Vehicle Engineering Lab",
   },
 ];
 

@@ -38,6 +38,15 @@ export function SimulationShell({
   const router =
     useRouter();
 
+  const sceneNumberOffset =
+    moduleLabel === "Module 01" ? 0 : 1;
+
+  const parsedSceneNumber = Number(sceneNumber);
+
+  const displayedSceneNumber = Number.isFinite(parsedSceneNumber)
+    ? String(parsedSceneNumber + sceneNumberOffset).padStart(2, "0")
+    : sceneNumber;
+
   /* =======================================================
      CONTROL DRAWER
   ======================================================= */
@@ -181,7 +190,7 @@ export function SimulationShell({
               <div className="mt-1 flex min-w-0 items-center gap-2">
                 <span className="shrink-0 font-[var(--font-jetbrains-mono)] text-[8px] text-[var(--color-brand-red)] sm:text-[9px]">
                   {
-                    sceneNumber
+                    displayedSceneNumber
                   }
                 </span>
 
@@ -248,13 +257,13 @@ export function SimulationShell({
 
       <FoundationLayer
         key={
-          sceneNumber
+          displayedSceneNumber
         }
         moduleLabel={
           moduleLabel
         }
         sceneNumber={
-          sceneNumber
+          displayedSceneNumber
         }
         sceneLabel={
           sceneLabel
@@ -487,7 +496,7 @@ export function SimulationShell({
 
                     <span className="mt-0.5 block truncate font-[var(--font-jetbrains-mono)] text-[7px] uppercase tracking-wide text-slate-500 sm:text-[8px]">
                       {
-                        sceneNumber
+                        displayedSceneNumber
                       }{" "}
                       ·{" "}
                       {

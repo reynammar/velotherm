@@ -154,11 +154,11 @@ export function Scene01KineticEnergy() {
             </div>
 
             <div className="mt-4 border-t border-slate-700 pt-3">
-              <span className="font-[var(--font-jetbrains-mono)] text-[10px] text-slate-300">
+              <span className="font-[var(--font-jetbrains-mono)] text-base font-semibold text-slate-200 sm:text-lg">
                 KE = ½mv²
               </span>
 
-              <p className="mt-1 font-[var(--font-jetbrains-mono)] text-[9px] text-slate-500">
+              <p className="mt-2 font-[var(--font-jetbrains-mono)] text-xs text-slate-400 sm:text-sm">
                 ½ × {massKg} ×{" "}
                 {speedMs.toFixed(
                   2,

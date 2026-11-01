@@ -815,10 +815,10 @@ export const FOUNDATION_TOPICS: FoundationTopic[] = [
     summary:
       "Thermal efficiency compares the useful work produced by a power cycle with the energy supplied to it.",
     terms: [
-      "Thermal efficiency",
+      "Cycle",
       "Heat input",
       "Work output",
-      "Cycle",
+      "Efficiency",
     ],
     takeaway:
       "Efficiency provides a common engineering language for comparing how effectively a cycle uses its energy input.",
@@ -904,6 +904,22 @@ export const FOUNDATION_SCENE_CONTEXT: Record<
 
   "03": {
     recommendedTopics: [
+      "system-classification",
+      "boundary-surroundings",
+      "heat",
+      "boundary-work",
+      "internal-energy",
+      "first-law",
+      "energy-balance",
+    ],
+    contextTitle:
+      "Inside the piston-cylinder",
+    contextDescription:
+      "The X-ray view highlights the closed-system boundary and shows how heat transfer and piston motion change internal energy.",
+  },
+
+  "04": {
+    recommendedTopics: [
       "system",
       "boundary-surroundings",
       "work",
@@ -916,7 +932,7 @@ export const FOUNDATION_SCENE_CONTEXT: Record<
       "The piston-cylinder provides a clear physical boundary where pressure and volume change are connected with work.",
   },
 
-  "04": {
+  "05": {
     recommendedTopics: [
       "pressure",
       "boundary-work",
@@ -930,7 +946,7 @@ export const FOUNDATION_SCENE_CONTEXT: Record<
       "The P–V diagram connects pressure, volume change, process path, and boundary work.",
   },
 
-  "05": {
+  "06": {
     recommendedTopics: [
       "torque",
       "angular-velocity",
@@ -943,7 +959,7 @@ export const FOUNDATION_SCENE_CONTEXT: Record<
       "Rotating shafts connect torque and angular velocity with mechanical power.",
   },
 
-  "06": {
+  "07": {
     recommendedTopics: [
       "heat",
       "internal-energy",
@@ -958,7 +974,7 @@ export const FOUNDATION_SCENE_CONTEXT: Record<
       "This scene connects heat transfer with changes in internal energy.",
   },
 
-  "07": {
+  "08": {
     recommendedTopics: [
       "first-law",
       "energy-balance",
@@ -973,7 +989,7 @@ export const FOUNDATION_SCENE_CONTEXT: Record<
       "The First Law connects heat transfer, work, and changes in system energy.",
   },
 
-  "08": {
+  "09": {
     recommendedTopics: [
       "energy-conversion",
       "hybrid-flow",
@@ -986,7 +1002,7 @@ export const FOUNDATION_SCENE_CONTEXT: Record<
       "The hybrid system connects several energy conversion stages from engine output to vehicle motion.",
   },
 
-  "09": {
+  "10": {
     recommendedTopics: [
       "thermodynamic-cycle",
       "energy",
@@ -1000,7 +1016,7 @@ export const FOUNDATION_SCENE_CONTEXT: Record<
       "This context introduces repeated thermodynamic processes and how cycle performance is evaluated.",
   },
 
-  "10": {
+  "11": {
     recommendedTopics: [
       "energy",
       "energy-conversion",

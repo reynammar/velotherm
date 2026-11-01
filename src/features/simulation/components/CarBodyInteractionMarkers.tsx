@@ -3,12 +3,7 @@
 import {
   useMemo,
   useRef,
-  useState,
 } from "react";
-
-import {
-  Billboard,
-} from "@react-three/drei";
 
 import {
   useFrame,
@@ -18,13 +13,14 @@ import type {
   ThreeEvent,
 } from "@react-three/fiber";
 
-import type {
-  Object3D,
-} from "three";
-
 import {
   Box3,
+  DoubleSide,
+  Matrix4,
   Vector3,
+  type Group,
+  type Mesh,
+  type Object3D,
 } from "three";
 
 import {
@@ -35,270 +31,147 @@ import {
 
 type CarBodyInteractionMarkersProps = {
   scene: Object3D;
-
-  openStates: Record<
-    BodyInteractionKey,
-    boolean
-  >;
-
-  onInteract: (
-    key: BodyInteractionKey,
-  ) => void;
+  openStates: Record<BodyInteractionKey, boolean>;
+  onInteract: (key: BodyInteractionKey) => void;
 };
 
-type BodyInteractionMarkerProps = {
+type BodyInteractionHitAreaProps = {
   scene: Object3D;
-
   config: BodyInteractionConfig;
-
-  open: boolean;
-
-  onInteract: (
-    key: BodyInteractionKey,
-  ) => void;
+  onInteract: (key: BodyInteractionKey) => void;
 };
 
-function getNodes(
+const HIT_AREA_PADDING = 0.075;
+const MIN_HIT_AREA_SIZE = 0.12;
+
+function getInteractionNodes(
   scene: Object3D,
-  names: string[],
+  config: BodyInteractionConfig,
 ): Object3D[] {
-  return names
-    .map(
-      (name) =>
-        scene.getObjectByName(
-          name,
-        ) ?? null,
-    )
+  return config.interactionNodes
+    .map((name) => scene.getObjectByName(name) ?? null)
     .filter(
-      (
-        node,
-      ): node is Object3D =>
-        Boolean(node),
+      (node): node is Object3D => Boolean(node),
     );
 }
 
-function getBoundsCenter(
-  nodes: Object3D[],
-): Vector3 | null {
-  if (nodes.length === 0) {
-    return null;
-  }
-
-  const bounds = new Box3();
-
-  for (const node of nodes) {
-    bounds.expandByObject(node);
-  }
-
-  if (bounds.isEmpty()) {
-    return null;
-  }
-
-  return bounds.getCenter(
-    new Vector3(),
-  );
-}
-
-function getMarkerWorldPosition(
-  nodes: Object3D[],
-  mode:
-    | "node"
-    | "bounds",
-  verticalOffset = 0,
-): Vector3 | null {
-  if (nodes.length === 0) {
-    return null;
-  }
-
-  if (mode === "node") {
-    const position =
-      new Vector3();
-
-    nodes[0].getWorldPosition(
-      position,
-    );
-
-    return position;
-  }
-
-  const center =
-    getBoundsCenter(nodes);
-
-  if (!center) {
-    return null;
-  }
-
-  const bounds = new Box3();
-
-  for (const node of nodes) {
-    bounds.expandByObject(node);
-  }
-
-  const size =
-    bounds.getSize(
-      new Vector3(),
-    );
-
-  center.y +=
-    size.y * verticalOffset;
-
-  return center;
-}
-
-function getMarkerRadius(
-  nodes: Object3D[],
-): number {
-  if (nodes.length === 0) {
-    return 0.075;
-  }
-
-  const bounds = new Box3();
-
-  for (const node of nodes) {
-    bounds.expandByObject(node);
-  }
-
-  if (bounds.isEmpty()) {
-    return 0.075;
-  }
-
-  const size =
-    bounds.getSize(
-      new Vector3(),
-    );
-
-  const calculated =
-    size.length() * 0.06;
-
-  return Math.min(
-    Math.max(
-      calculated,
-      0.055,
-    ),
-    0.1,
-  );
-}
-
-function BodyInteractionMarker({
+function BodyInteractionHitArea({
   scene,
   config,
-  open,
   onInteract,
-}: BodyInteractionMarkerProps) {
-  const markerRef =
-    useRef<Object3D | null>(
-      null,
-    );
+}: BodyInteractionHitAreaProps) {
+  const groupRef = useRef<Group | null>(null);
+  const hitAreaRef = useRef<Mesh | null>(null);
 
-  const worldPositionRef =
-    useRef(
-      new Vector3(),
-    );
-
-  const localPositionRef =
-    useRef(
-      new Vector3(),
-    );
-
-  const [
-    hovered,
-    setHovered,
-  ] = useState(false);
+  const inverseParentMatrixRef = useRef(new Matrix4());
+  const worldBoundsRef = useRef(new Box3());
+  const localBoundsRef = useRef(new Box3());
+  const centerRef = useRef(new Vector3());
+  const sizeRef = useRef(new Vector3());
+  const cornerRef = useRef(new Vector3());
 
   const nodes = useMemo(
-    () =>
-      getNodes(
-        scene,
-        config.markerNodes,
+    () => getInteractionNodes(scene, config),
+    [scene, config],
+  );
+
+  useFrame(() => {
+    const group = groupRef.current;
+    const hitArea = hitAreaRef.current;
+
+    if (!group || !hitArea || nodes.length === 0) {
+      return;
+    }
+
+    const parent = group.parent;
+
+    if (!parent) {
+      return;
+    }
+
+    scene.updateWorldMatrix(true, true);
+    parent.updateWorldMatrix(true, false);
+
+    const worldBounds = worldBoundsRef.current;
+    worldBounds.makeEmpty();
+
+    for (const node of nodes) {
+      worldBounds.expandByObject(node);
+    }
+
+    if (worldBounds.isEmpty()) {
+      return;
+    }
+
+    inverseParentMatrixRef.current
+      .copy(parent.matrixWorld)
+      .invert();
+
+    const localBounds = localBoundsRef.current;
+    localBounds.makeEmpty();
+
+    const min = worldBounds.min;
+    const max = worldBounds.max;
+
+    const corners: Array<[number, number, number]> = [
+      [min.x, min.y, min.z],
+      [min.x, min.y, max.z],
+      [min.x, max.y, min.z],
+      [min.x, max.y, max.z],
+      [max.x, min.y, min.z],
+      [max.x, min.y, max.z],
+      [max.x, max.y, min.z],
+      [max.x, max.y, max.z],
+    ];
+
+    for (const [x, y, z] of corners) {
+      cornerRef.current
+        .set(x, y, z)
+        .applyMatrix4(inverseParentMatrixRef.current);
+
+      localBounds.expandByPoint(cornerRef.current);
+    }
+
+    localBounds.getCenter(centerRef.current);
+    localBounds.getSize(sizeRef.current);
+
+    group.position.copy(centerRef.current);
+
+    hitArea.scale.set(
+      Math.max(
+        sizeRef.current.x + HIT_AREA_PADDING,
+        MIN_HIT_AREA_SIZE,
       ),
-    [
-      scene,
-      config.markerNodes,
-    ],
-  );
-
-  const radius = useMemo(
-    () =>
-      getMarkerRadius(nodes),
-    [nodes],
-  );
-
-  const verticalOffset =
-    config.markerVerticalOffset ??
-    0;
-
-  useFrame(
-    (state) => {
-      const marker =
-        markerRef.current;
-
-      if (!marker) {
-        return;
-      }
-
-      const parent =
-        marker.parent;
-
-      if (!parent) {
-        return;
-      }
-
-      const worldPosition =
-        getMarkerWorldPosition(
-          nodes,
-          config.markerMode,
-          verticalOffset,
-        );
-
-      if (!worldPosition) {
-        return;
-      }
-
-      worldPositionRef.current.copy(
-        worldPosition,
-      );
-
-      localPositionRef.current.copy(
-        worldPositionRef.current,
-      );
-
-      parent.worldToLocal(
-        localPositionRef.current,
-      );
-
-      marker.position.copy(
-        localPositionRef.current,
-      );
-
-      const pulse =
-        hovered || open
-          ? 1 +
-            Math.sin(
-              state.clock.getElapsedTime() *
-                5,
-            ) *
-              0.06
-          : 1;
-
-      const scale =
-        hovered
-          ? 1.25
-          : 1;
-
-      marker.scale.setScalar(
-        pulse * scale,
-      );
-    },
-  );
+      Math.max(
+        sizeRef.current.y + HIT_AREA_PADDING,
+        MIN_HIT_AREA_SIZE,
+      ),
+      Math.max(
+        sizeRef.current.z + HIT_AREA_PADDING,
+        MIN_HIT_AREA_SIZE,
+      ),
+    );
+  });
 
   const handlePointerDown = (
     event: ThreeEvent<PointerEvent>,
   ) => {
     event.stopPropagation();
+    onInteract(config.key);
+  };
 
-    onInteract(
-      config.key,
-    );
+  const handlePointerOver = (
+    event: ThreeEvent<PointerEvent>,
+  ) => {
+    event.stopPropagation();
+    document.body.style.cursor = "pointer";
+  };
+
+  const handlePointerOut = (
+    event: ThreeEvent<PointerEvent>,
+  ) => {
+    event.stopPropagation();
+    document.body.style.cursor = "";
   };
 
   if (nodes.length === 0) {
@@ -306,146 +179,23 @@ function BodyInteractionMarker({
   }
 
   return (
-    <group
-      ref={markerRef}
-      renderOrder={1100}
-    >
-      <Billboard
-        follow
-        lockX={false}
-        lockY={false}
-        lockZ={false}
+    <group ref={groupRef}>
+      <mesh
+        ref={hitAreaRef}
+        onPointerDown={handlePointerDown}
+        onPointerOver={handlePointerOver}
+        onPointerOut={handlePointerOut}
       >
-        <group>
-          {/* ===============================================
-              HIT SPHERE
-          ================================================ */}
+        <boxGeometry args={[1, 1, 1]} />
 
-          <mesh
-            onPointerDown={
-              handlePointerDown
-            }
-            onPointerOver={(
-              event,
-            ) => {
-              event.stopPropagation();
-              setHovered(true);
-            }}
-            onPointerOut={(
-              event,
-            ) => {
-              event.stopPropagation();
-              setHovered(false);
-            }}
-            renderOrder={1100}
-          >
-            <sphereGeometry
-              args={[
-                radius * 1.8,
-                16,
-                12,
-              ]}
-            />
-
-            <meshBasicMaterial
-              transparent
-              opacity={0}
-              depthTest={false}
-              depthWrite={false}
-            />
-          </mesh>
-
-          {/* ===============================================
-              OUTER RING
-          ================================================ */}
-
-          <mesh
-            onPointerDown={
-              handlePointerDown
-            }
-            onPointerOver={(
-              event,
-            ) => {
-              event.stopPropagation();
-              setHovered(true);
-            }}
-            onPointerOut={(
-              event,
-            ) => {
-              event.stopPropagation();
-              setHovered(false);
-            }}
-            renderOrder={1101}
-          >
-            <ringGeometry
-              args={[
-                radius * 0.72,
-                radius,
-                32,
-              ]}
-            />
-
-            <meshBasicMaterial
-              color={
-                open || hovered
-                  ? "#22d3ee"
-                  : "#cbd5e1"
-              }
-              transparent
-              opacity={
-                open || hovered
-                  ? 1
-                  : 0.9
-              }
-              depthTest={false}
-              depthWrite={false}
-            />
-          </mesh>
-
-          {/* ===============================================
-              CENTER DOT
-          ================================================ */}
-
-          <mesh
-            onPointerDown={
-              handlePointerDown
-            }
-            onPointerOver={(
-              event,
-            ) => {
-              event.stopPropagation();
-              setHovered(true);
-            }}
-            onPointerOut={(
-              event,
-            ) => {
-              event.stopPropagation();
-              setHovered(false);
-            }}
-            renderOrder={1102}
-          >
-            <sphereGeometry
-              args={[
-                radius * 0.24,
-                12,
-                8,
-              ]}
-            />
-
-            <meshBasicMaterial
-              color={
-                open
-                  ? "#ffffff"
-                  : "#dc2626"
-              }
-              transparent
-              opacity={1}
-              depthTest={false}
-              depthWrite={false}
-            />
-          </mesh>
-        </group>
-      </Billboard>
+        <meshBasicMaterial
+          transparent
+          opacity={0}
+          colorWrite={false}
+          depthWrite={false}
+          side={DoubleSide}
+        />
+      </mesh>
     </group>
   );
 }
@@ -455,25 +205,18 @@ export function CarBodyInteractionMarkers({
   openStates,
   onInteract,
 }: CarBodyInteractionMarkersProps) {
+  void openStates;
+
   return (
     <group>
-      {BODY_INTERACTION_CONFIGS.map(
-        (config) => (
-          <BodyInteractionMarker
-            key={config.key}
-            scene={scene}
-            config={config}
-            open={
-              openStates[
-                config.key
-              ]
-            }
-            onInteract={
-              onInteract
-            }
-          />
-        ),
-      )}
+      {BODY_INTERACTION_CONFIGS.map((config) => (
+        <BodyInteractionHitArea
+          key={config.key}
+          scene={scene}
+          config={config}
+          onInteract={onInteract}
+        />
+      ))}
     </group>
   );
 }

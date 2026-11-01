@@ -294,7 +294,7 @@ export function Scene05PowerRotation() {
                 Power
               </TechnicalLabel>
 
-              <span className="font-[var(--font-jetbrains-mono)] text-[9px] text-slate-500">
+              <span className="font-[var(--font-jetbrains-mono)] text-sm font-semibold text-slate-300 sm:text-base">
                 P = τω
               </span>
             </div>
@@ -312,11 +312,11 @@ export function Scene05PowerRotation() {
             </div>
 
             <div className="mt-4 border-t border-slate-700 pt-3">
-              <span className="font-[var(--font-jetbrains-mono)] text-[9px] text-slate-400">
+              <span className="font-[var(--font-jetbrains-mono)] text-base font-semibold text-slate-200 sm:text-lg">
                 τ × ω
               </span>
 
-              <p className="mt-1 font-[var(--font-jetbrains-mono)] text-[9px] text-slate-500">
+              <p className="mt-1 font-[var(--font-jetbrains-mono)] text-sm text-slate-400 sm:text-base">
                 {torqueNm} ×{" "}
                 {angularVelocityRadS.toFixed(
                   1,
